@@ -101,6 +101,10 @@ select[multiple] option{padding:4px 8px}
   border-radius:20px;cursor:pointer;transition:.12s}
 .dim-toggle:hover{border-color:#c9cfda}
 .dim-toggle.on{background:var(--accent-soft);border-color:#c7d2fe;color:var(--accent);font-weight:600}
+.qchip{border:1px solid var(--line);background:#fff;color:var(--ink-2);padding:5px 11px;font-size:12px;
+  border-radius:20px;cursor:pointer;transition:.12s}
+.qchip:hover{border-color:var(--accent);color:var(--accent)}
+.qchip.on{background:var(--accent-soft);border-color:#c7d2fe;color:var(--accent);font-weight:600}
 
 /* ── table ── */
 table{border-collapse:separate;border-spacing:0;font-size:12.5px;width:100%;font-variant-numeric:tabular-nums}
@@ -369,96 +373,148 @@ td.dim{color:var(--ink-3)}
 <div id="query" class="shell">
   <div class="main" style="padding:28px;max-width:1600px">
 
-    <!-- 自然语言 -->
+    <!-- 合并查询面板 -->
     <div class="card">
-      <div class="card-hd"><h3>自然语言取数</h3><span class="sub">输入关键词后回车，如：APP ja_jp 列表-出票CR 6.1到6.30</span></div>
-      <div class="card-bd">
-        <input id="nlInput" class="sel" style="width:100%;min-width:0;font-size:13px;padding:10px 14px"
-          placeholder="APP ja_jp 新客 出票票量 6.1到6.30 周度"
-          onkeydown="if(event.key==='Enter')nlQuery()">
-        <div style="margin-top:8px;display:flex;gap:6px">
-          <button class="btn p" onclick="nlQuery()">查询</button>
-          <button class="btn" onclick="qReset()">重置</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 快捷按钮 -->
-    <div class="card">
-      <div class="card-hd"><h3>快捷查询</h3><div class="sp"></div><button class="btn" onclick="togglePanel()">更多筛选 ▼</button></div>
-      <div class="card-bd">
-        <div class="ctrl" style="gap:6px">
-          <span class="sub">分端</span>
-          <button class="chip" onclick="qQuick({plat:'app'})">APP</button>
-          <button class="chip" onclick="qQuick({plat:'pc'})">PC</button>
-          <button class="chip" onclick="qQuick({plat:'h5'})">H5</button>
-          <span class="sub" style="margin-left:8px">新老客</span>
-          <button class="chip" onclick="qQuick({cust:'新客'})">新客</button>
-          <button class="chip" onclick="qQuick({cust:'老客'})">老客</button>
-        </div>
-        <div class="ctrl" style="gap:6px;margin-top:8px">
-          <span class="sub">locale</span>
-          <button class="chip" onclick="qQuick({loc:'ja_jp'})">ja_jp</button>
-          <button class="chip" onclick="qQuick({loc:'ru_ru'})">ru_ru</button>
-          <button class="chip" onclick="qQuick({loc:'en_xx'})">en_xx</button>
-          <button class="chip" onclick="qQuick({loc:'zh_hk'})">zh_hk</button>
-          <button class="chip" onclick="qQuick({loc:'ko_kr'})">ko_kr</button>
-          <button class="chip" onclick="qQuick({loc:'en_gb'})">en_gb</button>
-          <button class="chip" onclick="qQuick({loc:'en_us'})">en_us</button>
-          <button class="chip" onclick="qQuick({loc:'en_au'})">en_au</button>
-          <button class="chip" onclick="qQuick({loc:'zh_tw'})">zh_tw</button>
-          <button class="chip" onclick="qQuick({loc:'en_sg'})">en_sg</button>
-        </div>
-        <div class="ctrl" style="gap:6px;margin-top:8px">
-          <span class="sub">营销渠道</span>
-          <button class="chip" onclick="qQuick({chan:'自然&其他'})">自然&其他</button>
-          <button class="chip" onclick="qQuick({chan:'投放'})">投放</button>
-          <button class="chip" onclick="qQuick({chan:'SEO'})">SEO</button>
-          <button class="chip" onclick="qQuick({chan:'Organic'})">Organic</button>
-          <button class="chip" onclick="qQuick({chan:'PPC'})">PPC</button>
-          <button class="chip" onclick="qQuick({chan:'推送'})">推送</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 结构化面板（默认折叠） -->
-    <div class="card" id="structPanel" style="display:none">
-      <div class="card-hd"><h3>结构化查询</h3><div class="sp"></div>
+      <div class="card-hd">
+        <h3>自由取数</h3>
+        <div class="sp"></div>
+        <button class="btn" id="advBtn" onclick="toggleAdvanced()">高级筛选 ▼</button>
         <button class="btn p" onclick="qExec()">查询</button>
         <button class="btn" onclick="qReset()">重置</button>
       </div>
       <div class="card-bd">
-        <div class="ctrl" style="gap:14px">
-          <div><label class="qlbl">时间粒度</label>
-            <div class="seg" id="seg-qgran">
-              <button class="on" onclick="segOn(this);Q.gran='day'">日</button>
-              <button onclick="segOn(this);Q.gran='week'">周</button>
-              <button onclick="segOn(this);Q.gran='month'">月</button>
-            </div></div>
-          <div><label class="qlbl">开始日期</label><input type="date" class="sel" id="qStart" style="min-width:140px"></div>
-          <div><label class="qlbl">结束日期</label><input type="date" class="sel" id="qEnd" style="min-width:140px"></div>
-          <div><label class="qlbl">展示模式</label>
-            <div class="seg" id="seg-qmode">
-              <button class="on" onclick="segOn(this);Q.cross=false">合并聚合</button>
-              <button onclick="segOn(this);Q.cross=true">交叉展开</button>
-            </div></div>
+
+        <!-- 自然语言输入（常驻，最高优先级） -->
+        <div style="margin-bottom:14px">
+          <div class="ctrl" style="gap:6px">
+            <input id="nlInput" class="sel" style="flex:1;min-width:0;font-size:13px;padding:8px 12px"
+              placeholder="如：APP ja_jp 新客 出票票量 6.1到6.30 周度"
+              onkeydown="if(event.key==='Enter')nlQuery()">
+            <button class="btn p" onclick="nlQuery()">解析查询</button>
+          </div>
         </div>
-        <div class="ctrl" style="gap:14px;margin-top:14px">
-          <div style="flex:1;min-width:120px"><label class="qlbl">平台</label>
-            <select id="qPlat" class="sel" multiple size="4"><option value="ttl" selected>全部</option><option value="app">APP</option><option value="pc">PC</option><option value="h5">H5</option></select></div>
-          <div style="flex:1;min-width:120px"><label class="qlbl">新老客</label>
-            <select id="qCust" class="sel" multiple size="3"><option value="ttl" selected>全部</option><option value="新客">新客</option><option value="老客">老客</option></select></div>
-          <div style="flex:2;min-width:200px"><label class="qlbl">locale</label>
-            <select id="qLoc" class="sel" multiple size="4"><option value="ttl" selected>全部</option></select></div>
-          <div style="flex:2;min-width:200px"><label class="qlbl">营销渠道</label>
-            <select id="qChan" class="sel" multiple size="4"><option value="ttl" selected>全部</option></select></div>
+
+        <!-- 快捷按钮区 -->
+        <div class="ctrl" style="gap:6px;flex-wrap:wrap">
+          <span class="sub">分端</span>
+          <button class="qchip" onclick="qQuick({plat:'app'})">APP</button>
+          <button class="qchip" onclick="qQuick({plat:'pc'})">PC</button>
+          <button class="qchip" onclick="qQuick({plat:'h5'})">H5</button>
+          <span class="sub" style="margin-left:8px">新老客</span>
+          <button class="qchip" onclick="qQuick({cust:'新客'})">新客</button>
+          <button class="qchip" onclick="qQuick({cust:'老客'})">老客</button>
+          <span class="sub" style="margin-left:8px">locale</span>
+          <button class="qchip" onclick="qQuick({loc:'ja_jp'})">ja_jp</button>
+          <button class="qchip" onclick="qQuick({loc:'ru_ru'})">ru_ru</button>
+          <button class="qchip" onclick="qQuick({loc:'en_xx'})">en_xx</button>
+          <button class="qchip" onclick="qQuick({loc:'zh_hk'})">zh_hk</button>
+          <button class="qchip" onclick="qQuick({loc:'ko_kr'})">ko_kr</button>
+          <button class="qchip" onclick="qQuick({loc:'en_gb'})">en_gb</button>
+          <button class="qchip" onclick="qQuick({loc:'en_us'})">en_us</button>
+          <button class="qchip" onclick="qQuick({loc:'en_au'})">en_au</button>
+          <button class="qchip" onclick="qQuick({loc:'zh_tw'})">zh_tw</button>
+          <button class="qchip" onclick="qQuick({loc:'en_sg'})">en_sg</button>
+          <span class="sub" style="margin-left:8px">营销渠道</span>
+          <button class="qchip" onclick="qQuick({chan:'自然&其他'})">自然&其他</button>
+          <button class="qchip" onclick="qQuick({chan:'投放'})">投放</button>
+          <button class="qchip" onclick="qQuick({chan:'SEO'})">SEO</button>
+          <button class="qchip" onclick="qQuick({chan:'Organic'})">Organic</button>
+          <button class="qchip" onclick="qQuick({chan:'PPC'})">PPC</button>
+          <button class="qchip" onclick="qQuick({chan:'推送'})">推送</button>
         </div>
-        <div style="margin-top:14px"><label class="qlbl">指标（可多选）</label>
-          <div class="mcols">
-            <div><span class="sub">票量</span><div class="chips" id="qMetrics-vol"></div></div>
-            <div><span class="sub">CR</span><div class="chips" id="qMetrics-cr"></div></div>
-            <div><span class="sub">UV</span><div class="chips" id="qMetrics-uv"></div></div>
-          </div></div>
+
+        <!-- 高级筛选区（默认折叠） -->
+        <div id="advPanel" style="display:none;margin-top:16px;border-top:1px solid var(--line-2);padding-top:16px">
+
+          <!-- 时间 + 粒度 -->
+          <div class="ctrl" style="gap:14px;flex-wrap:wrap;margin-bottom:14px">
+            <div><label class="qlbl">时间粒度</label>
+              <div class="seg" id="seg-qgran" style="margin-top:4px">
+                <button class="on" onclick="segOn(this);Q.gran='day'">日</button>
+                <button onclick="segOn(this);Q.gran='week'">周</button>
+                <button onclick="segOn(this);Q.gran='month'">月</button>
+              </div></div>
+            <div><label class="qlbl">开始日期</label><input type="date" class="sel" id="qStart" style="min-width:140px;margin-top:4px"></div>
+            <div><label class="qlbl">结束日期</label><input type="date" class="sel" id="qEnd" style="min-width:140px;margin-top:4px"></div>
+          </div>
+
+          <!-- 维度多选（折叠面板） -->
+          <div class="ctrl" style="gap:14px;flex-wrap:wrap;margin-bottom:14px;align-items:flex-start">
+            <!-- 平台 -->
+            <div style="position:relative">
+              <label class="qlbl">平台</label>
+              <div style="margin-top:4px;display:flex;align-items:center;gap:6px">
+                <button class="btn" onclick="toggleDrop('dropPlat')">选择平台 ▼</button>
+                <span class="sub" id="dimPlatCount">全部</span>
+              </div>
+              <div class="dropdown" id="dropPlat">
+                <div class="drop-list" id="dropPlatList">
+                  <label><input type="checkbox" value="ttl" onchange="toggleDropDim('qPlat','ttl',this)"> 全部</label>
+                  <label><input type="checkbox" value="app" onchange="toggleDropDim('qPlat','app',this)"> APP</label>
+                  <label><input type="checkbox" value="pc" onchange="toggleDropDim('qPlat','pc',this)"> PC</label>
+                  <label><input type="checkbox" value="h5" onchange="toggleDropDim('qPlat','h5',this)"> H5</label>
+                </div>
+              </div>
+            </div>
+            <!-- 新老客 -->
+            <div style="position:relative">
+              <label class="qlbl">新老客</label>
+              <div style="margin-top:4px;display:flex;align-items:center;gap:6px">
+                <button class="btn" onclick="toggleDrop('dropCust')">选择客户 ▼</button>
+                <span class="sub" id="dimCustCount">全部</span>
+              </div>
+              <div class="dropdown" id="dropCust">
+                <div class="drop-list" id="dropCustList">
+                  <label><input type="checkbox" value="ttl" onchange="toggleDropDim('qCust','ttl',this)"> 全部</label>
+                  <label><input type="checkbox" value="新客" onchange="toggleDropDim('qCust','新客',this)"> 新客</label>
+                  <label><input type="checkbox" value="老客" onchange="toggleDropDim('qCust','老客',this)"> 老客</label>
+                </div>
+              </div>
+            </div>
+            <!-- locale -->
+            <div style="position:relative">
+              <label class="qlbl">locale</label>
+              <div style="margin-top:4px;display:flex;align-items:center;gap:6px">
+                <button class="btn" onclick="toggleDrop('dropLocAdv')">选择 locale ▼</button>
+                <span class="sub" id="dimLocAdvCount">全部</span>
+              </div>
+              <div class="dropdown" id="dropLocAdv" style="min-width:260px">
+                <input class="sel" style="width:100%;min-width:0;margin-bottom:6px" placeholder="搜索…" oninput="renderDropLocAdv()">
+                <div class="drop-list" id="dropLocAdvList"></div>
+              </div>
+            </div>
+            <!-- 营销渠道 -->
+            <div style="position:relative">
+              <label class="qlbl">营销渠道</label>
+              <div style="margin-top:4px;display:flex;align-items:center;gap:6px">
+                <button class="btn" onclick="toggleDrop('dropChanAdv')">选择渠道 ▼</button>
+                <span class="sub" id="dimChanAdvCount">全部</span>
+              </div>
+              <div class="dropdown" id="dropChanAdv" style="min-width:220px">
+                <input class="sel" style="width:100%;min-width:0;margin-bottom:6px" placeholder="搜索…" oninput="renderDropChanAdv()">
+                <div class="drop-list" id="dropChanAdvList"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 隐藏 select（供 getSelValues 读取） -->
+          <div style="display:none">
+            <select id="qPlat" multiple><option value="ttl" selected>全部</option><option value="app">APP</option><option value="pc">PC</option><option value="h5">H5</option></select>
+            <select id="qCust" multiple><option value="ttl" selected>全部</option><option value="新客">新客</option><option value="老客">老客</option></select>
+            <select id="qLoc" multiple><option value="ttl" selected>全部</option></select>
+            <select id="qChan" multiple><option value="ttl" selected>全部</option></select>
+          </div>
+
+          <!-- 指标选择 -->
+          <div><label class="qlbl">指标（可多选）</label>
+            <div class="mcols" style="margin-top:6px">
+              <div><span class="sub">票量</span><div class="chips" id="qMetrics-vol" style="margin-top:4px"></div></div>
+              <div><span class="sub">CR</span><div class="chips" id="qMetrics-cr" style="margin-top:4px"></div></div>
+              <div><span class="sub">UV</span><div class="chips" id="qMetrics-uv" style="margin-top:4px"></div></div>
+            </div>
+          </div>
+
+        </div>
       </div>
     </div>
 
@@ -468,6 +524,17 @@ td.dim{color:var(--ink-3)}
         <div class="card-hd">
           <h3>查询结果</h3><span class="sub" id="qResultSub"></span>
           <div class="sp"></div>
+          <!-- 粒度切换 -->
+          <div class="seg" id="seg-rGran">
+            <button class="on" onclick="setRGran('day',this)">日</button>
+            <button onclick="setRGran('week',this)">周</button>
+            <button onclick="setRGran('month',this)">月</button>
+          </div>
+          <!-- 聚合切换 -->
+          <div class="seg" id="seg-rMode">
+            <button class="on" onclick="setRMode(false,this)">合并聚合</button>
+            <button onclick="setRMode(true,this)">交叉展开</button>
+          </div>
           <div class="seg" id="seg-qview">
             <button class="on" onclick="setQView('chart',this)">可视化</button>
             <button onclick="setQView('table',this)">数据表格</button>
@@ -479,30 +546,43 @@ td.dim{color:var(--ink-3)}
           <div id="v-qr-chart"><div class="chartbox"><canvas id="c-qr"></canvas></div></div>
           <div id="v-qr-table" style="display:none"><table id="t-qr"></table></div>
         </div>
+
+        <!-- 维度筛选 -->
         <div class="card-bd" style="border-top:1px solid var(--line-2)">
           <label class="qlbl">维度筛选</label>
-          <div class="ctrl" style="gap:16px;flex-wrap:wrap;align-items:flex-start">
+          <div class="ctrl" style="gap:16px;flex-wrap:wrap;align-items:flex-start;margin-top:8px">
             <div><span class="sub">平台</span>
               <div class="ctrl" style="gap:4px;margin-top:4px" id="qDimPlat"></div></div>
             <div><span class="sub">新老客</span>
               <div class="ctrl" style="gap:4px;margin-top:4px" id="qDimCust"></div></div>
             <div style="position:relative"><span class="sub">locale</span>
-              <div style="margin-top:4px"><button class="btn" onclick="toggleDrop('dropLoc')">选择 locale ▼</button>
-                <span class="sub" id="dimLocCount"></span></div>
+              <div style="margin-top:4px">
+                <button class="btn" onclick="toggleDrop('dropLoc')">选择 locale ▼</button>
+                <span class="sub" id="dimLocCount"></span>
+              </div>
               <div class="dropdown" id="dropLoc">
                 <input class="sel" style="width:100%;min-width:0;margin-bottom:6px" placeholder="搜索…" oninput="renderDropLoc()">
                 <div class="drop-list" id="dropLocList"></div>
               </div></div>
             <div style="position:relative"><span class="sub">营销渠道</span>
-              <div style="margin-top:4px"><button class="btn" onclick="toggleDrop('dropChan')">选择渠道 ▼</button>
-                <span class="sub" id="dimChanCount"></span></div>
+              <div style="margin-top:4px">
+                <button class="btn" onclick="toggleDrop('dropChan')">选择渠道 ▼</button>
+                <span class="sub" id="dimChanCount"></span>
+              </div>
               <div class="dropdown" id="dropChan">
                 <input class="sel" style="width:100%;min-width:0;margin-bottom:6px" placeholder="搜索…" oninput="renderDropChan()">
                 <div class="drop-list" id="dropChanList"></div>
               </div></div>
           </div>
-          <div style="margin-top:12px"><label class="qlbl">追加指标</label>
-            <div class="chips" id="qAddMetrics" style="max-height:80px"></div>
+
+          <!-- 追加指标 -->
+          <div style="margin-top:12px">
+            <label class="qlbl">追加指标</label>
+            <div style="margin-top:6px">
+              <div class="chips" id="qAddMetrics-vol" style="margin-bottom:6px"></div>
+              <div class="chips" id="qAddMetrics-cr" style="margin-bottom:6px"></div>
+              <div class="chips" id="qAddMetrics-uv"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -512,6 +592,9 @@ td.dim{color:var(--ink-3)}
 </div>
 
 <div class="toast" id="toast"></div>
+<div style="position:fixed;bottom:12px;right:16px;font-size:11px;color:#8b95a3;letter-spacing:.04em;pointer-events:none;z-index:10">
+  Made by <span style="color:#4f46e5;font-weight:600">irischen</span>
+</div>
 
 <script>
 /* ═════════ 列名 ═════════ */
@@ -744,11 +827,17 @@ function setBusy(msg){
 }
 /* 空态 / 内容切换 */
 function syncShell(){
-  const onQuery=document.getElementById('nav-query').classList.contains('on');
-  const has=!!DATA;
-  document.getElementById('empty').classList.toggle('on',!has&&!onQuery);
-  document.getElementById('report').classList.toggle('on',has&&!onQuery);
-  document.getElementById('query').classList.toggle('on',onQuery);
+  try{
+    const nq=document.getElementById('nav-query');
+    const onQuery=nq&&nq.classList.contains('on');
+    const has=!!DATA;
+    const empty=document.getElementById('empty');
+    const report=document.getElementById('report');
+    const query=document.getElementById('query');
+    if(empty)empty.classList.toggle('on',!has&&!onQuery);
+    if(report)report.classList.toggle('on',has&&!onQuery);
+    if(query)query.classList.toggle('on',!!onQuery);
+  }catch(e){console.error('syncShell error:',e);}
 }
 
 /* 周期：以数据所在年份的 5.15 为 W0 锚点，每 7 天一周 */
@@ -908,11 +997,40 @@ function lvTable(){
   document.getElementById('t-lv').innerHTML=h+'</tbody>';
 }
 function lvChart(){
-  const cw=WEEKS.at(-1),tops=topLocales(cw,10,'ttl'),PS=['app','pc','h5'];
-  // nums[locale][platform] 各端票量；denoms[platform] 该端全 locale 总票量（大盘）
-  const nums=tops.map(l=>PS.map(p=>SUM(rows(cw,p,l),C.tk)));
-  const denoms=PS.map(p=>SUM(rows(cw,p),C.tk));
-  bars('c-lv',tops,PS.map((p,i)=>({label:p.toUpperCase(),data:tops.map((l,li)=>nums[li][i])})),{nums,denoms});
+  const cw=WEEKS.at(-1),PS=['app','pc','h5'];
+  // 所有 locale 及三端各自票量
+  const allLocs=[...LOCSET];
+  const locData=allLocs.map(l=>({l,vals:PS.map(p=>SUM(rows(cw,p,l),C.tk))}));
+
+  // 初始可见端 = 全部
+  let visMask=[true,true,true];
+
+  function buildChart(){
+    // 按当前可见端的票量之和重排 TOP10
+    const ranked=locData.map(ld=>({l:ld.l,total:ld.vals.reduce((s,v,i)=>s+(visMask[i]?v:0),0)}))
+      .sort((a,b)=>b.total-a.total).slice(0,10);
+    const tops=ranked.map(x=>x.l);
+    const nums=tops.map(l=>{const ld=locData.find(d=>d.l===l);return ld?ld.vals:[0,0,0];});
+    const denoms=PS.map((p,i)=>visMask[i]?allLocs.reduce((s,l)=>{const ld=locData.find(d=>d.l===l);return s+(ld?ld.vals[i]:0);},0):0);
+    kill('c-lv');
+    CH['c-lv']=new Chart(document.getElementById('c-lv'),{type:'bar',
+      data:{labels:tops,datasets:PS.map((p,i)=>({
+        label:p.toUpperCase(),data:tops.map((_,li)=>nums[li][i]),
+        backgroundColor:PAL[i],borderRadius:3,barPercentage:.75,
+        hidden:!visMask[i]
+      }))},
+      options:{...baseOpt,layout:{padding:{top:22}},
+        plugins:{...baseOpt.plugins,zoom:{},shareLabel:{data:{nums,denoms,visMask}},
+          legend:{...baseOpt.plugins.legend,onClick:(e,item,legend)=>{
+            visMask[item.datasetIndex]=!visMask[item.datasetIndex];
+            buildChart();  // 重排后重建图表
+          }}},
+        scales:{...baseOpt.scales,
+          x:{...baseOpt.scales.x,stacked:true,ticks:{...baseOpt.scales.x.ticks,maxTicksLimit:20}},
+          y:{...baseOpt.scales.y,stacked:true}}},
+      plugins:[SHARE_LABEL]});
+  }
+  buildChart();
 }
 
 /* ── 1.3.2 拆locale流量及转化 TOP5 ── */
@@ -1137,15 +1255,14 @@ function multi(id,labels,sets,title){
 }
 /* 堆叠柱 + 柱顶占比（随图例显隐动态重算） */
 const SHARE_LABEL={id:'shareLabel',afterDatasetsDraw(c,a,o){
-  const D=o.data;if(!D)return;                       // D={nums:[[app,pc,h5]...], denoms:[appTot,pcTot,h5Tot]}
-  const vis=c.data.datasets.map((_,i)=>c.isDatasetVisible(i));
+  const D=o.data;if(!D)return;
+  const vis=D.visMask||c.data.datasets.map((_,i)=>c.isDatasetVisible(i));
   const den=D.denoms.reduce((s,v,i)=>s+(vis[i]?v:0),0);
   if(!den)return;
   const ctx=c.ctx;
   ctx.save();ctx.font='600 11px Inter,PingFang SC,sans-serif';ctx.fillStyle='#5b6472';ctx.textAlign='center';
   c.data.labels.forEach((_,li)=>{
     const num=D.nums[li].reduce((s,v,i)=>s+(vis[i]?v:0),0);
-    // 取该柱可见部分的最高点
     let top=null,x=null;
     c.data.datasets.forEach((_,di)=>{
       if(!vis[di])return;
@@ -1228,35 +1345,141 @@ const ALL_Q_METRICS=[
 let qSelectedMetrics=new Set([0,1]);
 
 function initQueryPanel(){
+  // 隐藏 select 里的 locale/渠道选项
   const ql=document.getElementById('qLoc');
   ql.innerHTML='<option value="ttl" selected>全部</option>';
   [...LOCSET].sort().forEach(l=>{const o=document.createElement('option');o.value=l;o.textContent=l;ql.add(o);});
   const qc=document.getElementById('qChan');
   qc.innerHTML='<option value="ttl" selected>全部</option>';
   [...CHANSET].sort().forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;qc.add(o);});
+  renderDropLocAdv();renderDropChanAdv();
   rebuildQChips();
 }
 
-function togglePanel(){
-  const p=document.getElementById('structPanel');
+function filterLocSelect(){
+  const q=(document.getElementById('qLocSearch').value||'').trim().toLowerCase();
+  const sel=document.getElementById('qLoc');
+  const curSel=new Set(getSelValues('qLoc'));
+  sel.innerHTML='<option value="ttl"'+(curSel.has('ttl')?' selected':'')+'>全部</option>';
+  [...LOCSET].sort().filter(l=>!q||l.toLowerCase().includes(q)).forEach(l=>{
+    const o=document.createElement('option');
+    o.value=l;o.textContent=l;o.selected=curSel.has(l);sel.add(o);
+  });
+}
+function toggleAdvanced(){
+  const p=document.getElementById('advPanel');
   const show=p.style.display==='none';
   p.style.display=show?'block':'none';
-  event.target.textContent=show?'收起筛选 ▲':'更多筛选 ▼';
+  document.getElementById('advBtn').textContent=show?'收起筛选 ▲':'高级筛选 ▼';
+}
+
+/* 结果区粒度切换（不重新查询，直接用当前条件刷新） */
+function setRGran(g,el){
+  Q.gran=g;segOn(el);
+  // 同步高级面板里的粒度按钮
+  document.querySelectorAll('#seg-qgran button').forEach(b=>b.classList.toggle('on',b.textContent===({'day':'日','week':'周','month':'月'}[g])));
+  qRefresh();
+}
+/* 结果区聚合切换 */
+function setRMode(cross,el){Q.cross=cross;segOn(el);qRefresh();}
+
+/* 仅刷新图表和表格，不重新读取维度 */
+function qRefresh(){
+  const lastSub=document.getElementById('qResultSub').textContent;
+  qExec();
+  // qExec 会更新 sub，保持一致即可
+}
+
+/* 快捷按钮点击高亮 */
+function qQuick(opts){
+  if(!DATA){toast('请先导入底表');return;}
+  // 高亮对应按钮
+  document.querySelectorAll('.qchip').forEach(b=>b.classList.remove('on'));
+  if(event&&event.target)event.target.classList.add('on');
+  setSelectVal('qPlat',opts.plat||'ttl');
+  setSelectVal('qLoc',opts.loc||'ttl');
+  setSelectVal('qCust',opts.cust||'ttl');
+  setSelectVal('qChan',opts.chan||'ttl');
+  document.getElementById('qStart').value='';document.getElementById('qEnd').value='';
+  Q.gran='day';Q.cross=false;
+  document.querySelectorAll('#seg-qgran button').forEach((b,i)=>b.classList.toggle('on',i===0));
+  document.querySelectorAll('#seg-rGran button').forEach((b,i)=>b.classList.toggle('on',i===0));
+  document.querySelectorAll('#seg-rMode button').forEach((b,i)=>b.classList.toggle('on',i===0));
+  qSelectedMetrics=new Set([0,1]);rebuildQChips();qExec();
 }
 
 function rebuildQChips(){
+  // 结构化面板内的指标选择器（三列）
   ['vol','cr','uv'].forEach(cat=>{
     const box=document.getElementById('qMetrics-'+cat);if(!box)return;
-    box.innerHTML=ALL_Q_METRICS.filter(m=>m.type===cat).map((m,_)=>{
+    box.innerHTML=ALL_Q_METRICS.filter(m=>m.type===cat).map(m=>{
       const i=ALL_Q_METRICS.indexOf(m),on=qSelectedMetrics.has(i);
       return `<button class="chip ${on?'on':''}" onclick="toggleQMetric(${i})">${m.n}</button>`;
     }).join('');
   });
-  const box2=document.getElementById('qAddMetrics');if(!box2)return;
-  box2.innerHTML=ALL_Q_METRICS.filter((_,i)=>!qSelectedMetrics.has(i)).map((m,_)=>{
-    const i=ALL_Q_METRICS.indexOf(m);
-    const cat=m.type==='vol'?'票量':m.type==='cr'?'CR':'UV';
-    return `<button class="chip" onclick="addQMetric(${i})">+ ${m.n} <span class="v">${cat}</span></button>`;
+  // 追加指标面板（三列，只显示未选中的）
+  ['vol','cr','uv'].forEach(cat=>{
+    const box=document.getElementById('qAddMetrics-'+cat);if(!box)return;
+    box.innerHTML=ALL_Q_METRICS.filter(m=>m.type===cat&&!qSelectedMetrics.has(ALL_Q_METRICS.indexOf(m))).map(m=>{
+      const i=ALL_Q_METRICS.indexOf(m);
+      return `<button class="chip" onclick="addQMetric(${i})">+ ${m.n}</button>`;
+    }).join('');
+  });
+}
+
+/* ── 高级筛选面板的维度折叠面板 ── */
+function toggleDropDim(selId, val, cb){
+  const sel=document.getElementById(selId);
+  if(val==='ttl'){
+    // 选全部 → 清除其他
+    [...sel.options].forEach(o=>o.selected=(o.value==='ttl'));
+    sel.parentElement.querySelectorAll('input[type=checkbox]').forEach(c=>{c.checked=(c.value==='ttl');});
+  }else{
+    // 选具体值 → 去掉全部
+    const ttlOpt=[...sel.options].find(o=>o.value==='ttl');
+    if(ttlOpt)ttlOpt.selected=false;
+    const opt=[...sel.options].find(o=>o.value===val);
+    if(opt)opt.selected=cb.checked;
+    // 如果没有任何选中，回到全部
+    const any=[...sel.selectedOptions].filter(o=>o.value!=='ttl');
+    if(!any.length){if(ttlOpt)ttlOpt.selected=true;cb.checked=false;}
+    // 同步全部 checkbox
+    const ttlCb=document.querySelector(`#drop${selId.replace('q','')}List input[value="ttl"]`);
+    if(ttlCb)ttlCb.checked=false;
+  }
+  updateDimCount(selId);
+  qExec();
+}
+
+function updateDimCount(selId){
+  const sel=document.getElementById(selId);
+  const vals=[...sel.selectedOptions].map(o=>o.value).filter(v=>v!=='ttl');
+  const countId={qPlat:'dimPlatCount',qCust:'dimCustCount',qLoc:'dimLocAdvCount',qChan:'dimChanAdvCount'}[selId];
+  const el=document.getElementById(countId);if(!el)return;
+  el.textContent=vals.length?`已选 ${vals.length} 个`:'全部';
+}
+
+function renderDropLocAdv(){
+  const box=document.getElementById('dropLocAdvList');if(!box)return;
+  const cur=new Set(getSelValues('qLoc'));
+  const input=box.parentElement.querySelector('input');
+  const q=(input?input.value:'').trim().toLowerCase();
+  const all=[{v:'ttl',n:'全部'},...[...LOCSET].sort().map(l=>({v:l,n:l}))];
+  box.innerHTML=all.filter(x=>!q||x.n.toLowerCase().includes(q)).map(x=>{
+    const chk=cur.has(x.v)?'checked':'';
+    return `<label><input type="checkbox" value="${x.v}" ${chk} onchange="toggleDropDim('qLoc','${x.v}',this)"> ${x.n}</label>`;
+  }).join('');
+}
+
+function renderDropChanAdv(){
+  const box=document.getElementById('dropChanAdvList');if(!box)return;
+  const cur=new Set(getSelValues('qChan'));
+  const input=box.parentElement.querySelector('input');
+  const q=(input?input.value:'').trim().toLowerCase();
+  const all=[{v:'ttl',n:'全部'},...[...CHANSET].sort().map(c=>({v:c,n:c}))];
+  box.innerHTML=all.filter(x=>!q||x.n.toLowerCase().includes(q)).map(x=>{
+    const chk=cur.has(x.v)?'checked':'';
+    return `<label><input type="checkbox" value="${x.v}" ${chk} onchange="toggleDropDim('qChan','${x.v}',this)"> ${x.n}</label>`;
   }).join('');
 }
 
@@ -1351,6 +1574,23 @@ function toggleQMetric(i){
 }
 function addQMetric(i){qSelectedMetrics.add(i);rebuildQChips();qExec();}
 
+function setSelectVal(id, val){
+  const el=document.getElementById(id);if(!el)return;
+  [...el.options].forEach(o=>{
+    if(val==='ttl'||val===null){o.selected=(o.value==='ttl');}
+    else{o.selected=(o.value===val);}
+  });
+  // 同步高级面板里的 checkbox（如果存在）
+  const dropMap={qPlat:'dropPlat',qCust:'dropCust',qLoc:'dropLocAdv',qChan:'dropChanAdv'};
+  const dropId=dropMap[id];
+  if(dropId){
+    const box=document.getElementById(dropId);
+    if(box)box.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+      cb.checked=(val==='ttl'?cb.value==='ttl':cb.value===val);
+    });
+    updateDimCount(id);
+  }
+}
 function getSelValues(id){return [...document.getElementById(id).selectedOptions].map(o=>o.value);}
 function parseDateInput(s){
   if(!s)return null;s=s.trim();
@@ -1419,7 +1659,31 @@ function qExec(){
     chans.filter(x=>x!=='ttl').join('+')].filter(Boolean).join(' · ')||'大盘';
   document.getElementById('qResultSub').textContent=desc+' · '+Q.gran+'度 · '+metrics.map(m=>m.n).join('+');
 
-  multi('c-qr',labels,series,desc);
+  // 判断是否需要双轴：量/UV 左轴，CR 右轴
+  const hasCR=metrics.some(m=>m.type==='cr');
+  const hasVol=metrics.some(m=>m.type!=='cr');
+  if(hasCR&&hasVol){
+    // 双轴
+    kill('c-qr');
+    CH['c-qr']=new Chart(document.getElementById('c-qr'),{type:'line',
+      data:{labels,datasets:series.map((s,i)=>{
+        const m=metrics[i%metrics.length];
+        const isCR=m&&m.type==='cr';
+        return{...s,borderColor:PAL[i%PAL.length],backgroundColor:'transparent',
+          tension:.3,borderWidth:1.8,pointRadius:pr(labels.length),pointHoverRadius:5,
+          spanGaps:true,yAxisID:isCR?'y1':'y'};})},
+      options:{...baseOpt,plugins:{...baseOpt.plugins,
+        title:{display:true,text:desc,font:{size:12},color:'#5b6472',padding:{bottom:10}},
+        zoom:ZOOM},
+        scales:{...baseOpt.scales,
+          y:{...baseOpt.scales.y,position:'left',title:{display:true,text:'量',color:'#8b95a3',font:{size:10}}},
+          y1:{position:'right',border:{display:false},grid:{display:false},
+            ticks:{font:{size:10.5},color:'#8b95a3',callback:v=>v.toFixed(1)+'%'},
+            title:{display:true,text:'CR(%)',color:'#8b95a3',font:{size:10}}}}}});
+    wireZoom('c-qr');
+  }else{
+    multi('c-qr',labels,series,desc);
+  }
   let th='<thead><tr><th>日期</th>'+series.map(s=>'<th>'+s.label+'</th>').join('')+'</tr></thead>';
   let tb='<tbody>'+labels.map((l,i)=>'<tr><td>'+l+'</td>'+series.map(s=>{const v=s.data[i];
     return '<td>'+(s.label.includes('CR')||s.label.includes('cr')?(v!=null?v.toFixed(2)+'%':'-'):fmtInt(v))+'</td>';}).join('')+'</tr>').join('')+'</tbody>';
@@ -1432,26 +1696,18 @@ function setQView(v,el){segOn(el);
   document.getElementById('v-qr-chart').style.display=v==='chart'?'block':'none';
   document.getElementById('v-qr-table').style.display=v==='table'?'block':'none';}
 
-function qQuick(opts){
-  if(!DATA){toast('请先导入底表');return;}
-  document.getElementById('qPlat').value=opts.plat||'ttl';
-  document.getElementById('qLoc').value=opts.loc||'ttl';
-  document.getElementById('qCust').value=opts.cust||'ttl';
-  document.getElementById('qChan').value=opts.chan||'ttl';
-  document.getElementById('qStart').value='';document.getElementById('qEnd').value='';
-  Q.gran='day';Q.cross=false;
-  document.querySelectorAll('#seg-qgran button').forEach((b,i)=>b.classList.toggle('on',i===0));
-  document.querySelectorAll('#seg-qmode button').forEach((b,i)=>b.classList.toggle('on',i===0));
-  qSelectedMetrics=new Set([0,1]);rebuildQChips();qExec();
-}
+
 
 function nlQuery(){
   if(!DATA){toast('请先导入底表');return;}
   const raw=document.getElementById('nlInput').value.trim();
   if(!raw){toast('请输入查询关键词');return;}
+  const rawU=raw.toUpperCase();
   let plat='ttl';
-  if(/\bAPP\b/i.test(raw))plat='app';else if(/\bPC\b/i.test(raw))plat='pc';else if(/\bH5\b/i.test(raw))plat='h5';
-  document.getElementById('qPlat').value=plat;
+  if(rawU.includes('APP'))plat='app';
+  else if(rawU.includes('H5'))plat='h5';    // H5 先于 PC，避免误匹配
+  else if(rawU.includes('PC'))plat='pc';
+  setSelectVal('qPlat',plat);
   let loc='ttl';
   const norm=s=>s.toLowerCase().replace(/[_\-\s]/g,'');
   const rawNorm=norm(raw);
@@ -1459,12 +1715,12 @@ function nlQuery(){
   // 也匹配中文别名
   const CN_LOC={'日本':'ja_jp','韩国':'ko_kr','香港':'zh_hk','台湾':'zh_tw','俄罗斯':'ru_ru','新加坡':'en_sg','英国':'en_gb','美国':'en_us','澳洲':'en_au','澳大利亚':'en_au'};
   for(const [cn,code] of Object.entries(CN_LOC)){if(raw.includes(cn)){loc=code;break;}}
-  document.getElementById('qLoc').value=loc;
+  setSelectVal('qLoc',loc);
   let cust='ttl';if(/新客/.test(raw))cust='新客';else if(/老客/.test(raw))cust='老客';
-  document.getElementById('qCust').value=cust;
+  setSelectVal('qCust',cust);
   let chan='ttl';
   for(const c of ['自然&其他','投放','SEO','Organic','PPC','推送','用户运营','活动&新媒体达人码','国际公域','商务合作','功能增长','SocialNetwork','Partner','Meta','EDM','Content','Commercialization','Branding','App Marketing','APP-Push']){if(raw.includes(c)){chan=c;break;}}
-  document.getElementById('qChan').value=chan;
+  setSelectVal('qChan',chan);
   Q.gran='day';
   if(/周度|by周|周视图/.test(raw))Q.gran='week';else if(/月度|by月|月视图/.test(raw))Q.gran='month';
   document.querySelectorAll('#seg-qgran button').forEach(b=>b.classList.toggle('on',
@@ -1474,7 +1730,11 @@ function nlQuery(){
     const yr=DAYS.length?DAYS[0].d.getFullYear():2026;
     document.getElementById('qStart').value=`${yr}-${dm[1].padStart(2,'0')}-${dm[2].padStart(2,'0')}`;
     document.getElementById('qEnd').value=`${yr}-${dm[3].padStart(2,'0')}-${dm[4].padStart(2,'0')}`;
-  }else{document.getElementById('qStart').value='';document.getElementById('qEnd').value='';}
+  }else{
+    // 没有指定时间范围 → 取底表全量
+    document.getElementById('qStart').value='';
+    document.getElementById('qEnd').value='';
+  }
   qSelectedMetrics=new Set();
   ALL_Q_METRICS.forEach((m,i)=>{if(raw.includes(m.n))qSelectedMetrics.add(i);});
   if(!qSelectedMetrics.size)qSelectedMetrics=new Set([0,1]);
@@ -1487,15 +1747,25 @@ function nlQuery(){
 function qReset(){
   document.getElementById('nlInput').value='';
   document.getElementById('qStart').value='';document.getElementById('qEnd').value='';
-  ['qPlat','qLoc','qCust','qChan'].forEach(id=>document.getElementById(id).value='ttl');
+  ['qPlat','qLoc','qCust','qChan'].forEach(id=>setSelectVal(id,'ttl'));
+  const ls=document.getElementById('qLocSearch');if(ls){ls.value='';filterLocSelect();}
   Q.gran='day';Q.cross=false;
   document.querySelectorAll('#seg-qgran button').forEach((b,i)=>b.classList.toggle('on',i===0));
-  document.querySelectorAll('#seg-qmode button').forEach((b,i)=>b.classList.toggle('on',i===0));
+  document.querySelectorAll('#seg-rGran button').forEach((b,i)=>b.classList.toggle('on',i===0));
+  document.querySelectorAll('#seg-rMode button').forEach((b,i)=>b.classList.toggle('on',i===0));
+  document.querySelectorAll('.qchip').forEach(b=>b.classList.remove('on'));
   qSelectedMetrics=new Set([0,1]);rebuildQChips();
   document.getElementById('qResult').style.display='none';
 }
 
+// 错误捕获 — 白屏时在顶部显示报错
+window.addEventListener('error',function(e){
+  const d=document.getElementById('errbar')||document.createElement('div');
+  d.id='errbar';
+  d.style.cssText='position:fixed;top:58px;left:0;right:0;background:#e5484d;color:#fff;padding:10px 16px;font-size:12px;z-index:9999;font-family:monospace;white-space:pre';
+  d.textContent=(d.textContent||'')+'line '+e.lineno+': '+e.message+'\n';
+  document.body.appendChild(d);
+},true);
+
 syncShell();
 </script>
-</body>
-</html>
