@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>日铁周报数据工具</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
+<style>
+:root{
+  --bg:#0f1115; --panel:#ffffff; --ink:#1c2024; --ink-2:#5b6472; --ink-3:#8b95a3;
+  --line:#e8ebf0; --line-2:#f1f3f7; --accent:#4f46e5; --accent-soft:#eef2ff;
+  --up:#0f9d58; --down:#e5484d; --chip:#f6f7f9;
+  --radius:10px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Inter","PingFang SC","Microsoft YaHei",-apple-system,system-ui,sans-serif;background:#f4f5f7;color:var(--ink);-webkit-font-smoothing:antialiased}
+button{font-family:inherit}
+
+/* ── top bar ── */
+.topbar{background:#12141a;color:#fff;padding:0 24px;height:58px;display:flex;align-items:center;gap:28px;position:sticky;top:0;z-index:50}
+.brand{font-size:14px;font-weight:600;letter-spacing:.02em;display:flex;align-items:center;gap:9px}
+.brand .dot{width:7px;height:7px;border-radius:50%;background:#6366f1;box-shadow:0 0 10px #6366f1}
+.tabs-top{display:flex;gap:2px;margin-left:8px}
+.tabs-top button{background:transparent;border:0;color:#8b93a3;padding:8px 14px;font-size:13px;border-radius:7px;cursor:pointer;transition:.15s}
+.tabs-top button:hover{color:#fff;background:#1d2028}
+.tabs-top button.on{background:#252a35;color:#fff}
+.topbar .right{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12px;color:#7b8494}
+.pill{background:#1d2028;border:1px solid #2a2f3a;padding:5px 10px;border-radius:20px;color:#c3c9d4;font-size:11.5px}
+
+/* ── upload ── */
+.empty{display:none;height:calc(100vh - 58px);align-items:center;justify-content:center}
+.empty.on{display:flex}
+.drop{width:560px;background:#fff;border:1.5px dashed #cfd5e0;border-radius:16px;padding:56px 40px;text-align:center;cursor:pointer;transition:.2s}
+.drop:hover{border-color:var(--accent);background:var(--accent-soft)}
+.drop h2{font-size:17px;font-weight:600;margin-bottom:8px}
+.drop p{color:var(--ink-3);font-size:13px;line-height:1.7}
+.drop .ico{font-size:34px;margin-bottom:14px;opacity:.8}
+input[type=file]{display:none}
+.btn.ghost{background:#1d2028;border-color:#2a2f3a;color:#c3c9d4}
+.btn.ghost:hover{background:#252a35;border-color:#3a4150;color:#fff}
+/* 全局拖拽遮罩 */
+#veil{position:fixed;inset:0;background:rgba(79,70,229,.10);backdrop-filter:blur(2px);z-index:200;display:none;align-items:center;justify-content:center}
+#veil.on{display:flex}
+#veil div{background:#fff;border:2px dashed var(--accent);border-radius:14px;padding:28px 44px;font-size:14px;font-weight:600;color:var(--accent)}
+
+/* ── layout ── */
+.shell{display:none;height:calc(100vh - 58px)}
+.shell.on{display:flex}
+.side{width:212px;background:#fff;border-right:1px solid var(--line);padding:16px 10px;overflow-y:auto;flex-shrink:0}
+.side .grp{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);padding:12px 10px 6px;font-weight:600}
+.side a{display:block;padding:9px 11px;border-radius:8px;font-size:13px;color:var(--ink-2);cursor:pointer;transition:.12s;margin-bottom:1px}
+.side a:hover{background:var(--line-2);color:var(--ink)}
+.side a.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.main{flex:1;overflow-y:auto;padding:24px 28px 60px}
+
+/* ── module card ── */
+.mod{display:none;max-width:1600px}
+.mod.on{display:block}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);margin-bottom:22px;overflow:hidden}
+.card-hd{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line-2);flex-wrap:wrap}
+.card-hd h3{font-size:14px;font-weight:600;letter-spacing:-.01em}
+.card-hd .sub{font-size:11.5px;color:var(--ink-3)}
+.card-hd .sp{flex:1}
+.card-bd{padding:16px 18px;overflow-x:auto}
+
+/* segmented control */
+.seg{display:inline-flex;background:var(--chip);border-radius:7px;padding:2px}
+.seg button{border:0;background:transparent;padding:5px 12px;font-size:12px;color:var(--ink-2);border-radius:5px;cursor:pointer;transition:.12s}
+.seg button.on{background:#fff;color:var(--ink);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink-2);padding:6px 11px;font-size:12px;border-radius:7px;cursor:pointer;transition:.12s}
+.btn:hover{border-color:#c9cfda;color:var(--ink);background:#fafbfc}
+.btn.p{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.p:hover{background:#4338ca;border-color:#4338ca}
+.sel{border:1px solid var(--line);background:#fff;color:var(--ink);padding:6px 10px;font-size:12px;border-radius:7px;cursor:pointer;min-width:180px;font-family:inherit}
+.sel:focus{outline:none;border-color:var(--accent)}
+.ctrl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;max-height:96px;overflow-y:auto;padding:2px}
+.chip{border:1px solid var(--line);background:#fff;color:var(--ink-2);padding:4px 10px;font-size:11.5px;border-radius:20px;cursor:pointer;transition:.12s;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.chip:hover{border-color:#c9cfda;background:#fafbfc}
+.chip.on{background:var(--accent-soft);border-color:#c7d2fe;color:var(--accent);font-weight:600}
+.chip .sw{width:7px;height:7px;border-radius:50%;background:transparent}
+.chip .v{color:var(--ink-3);font-weight:400;font-size:10.5px}
+.chip.on .v{color:#8b8ff0}
+.qlbl{display:block;font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:5px}
+select[multiple]{padding:4px;font-size:12px}
+select[multiple] option{padding:4px 8px}
+.mcols{display:grid;grid-template-columns:auto 1fr 1fr;gap:14px}
+.mcols>div>.sub{margin-bottom:6px;display:block}
+
+/* ── table ── */
+table{border-collapse:separate;border-spacing:0;font-size:12.5px;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:8px 12px;border-bottom:1px solid var(--line-2);text-align:right;white-space:nowrap}
+th{background:#fafbfc;font-weight:600;color:var(--ink-2);font-size:11.5px;position:sticky;top:0}
+thead tr:first-child th{border-top:1px solid var(--line-2)}
+td:first-child,th:first-child{text-align:left;position:sticky;left:0;background:#fff;z-index:2;font-weight:500}
+th:first-child{background:#fafbfc;z-index:3}
+tbody tr:hover td{background:#fbfcfe}
+tbody tr:hover td:first-child{background:#fbfcfe}
+tr.band td{background:#fcfcfd;font-weight:600;color:var(--ink-2);font-size:11.5px;letter-spacing:.02em}
+tr.band td:first-child{background:#fcfcfd}
+tr.tot td{font-weight:600}
+tr.grpstart td{border-top:1.5px solid var(--line)}
+td.dim{color:var(--ink-3)}
+.up{color:var(--up);font-weight:600}
+.dn{color:var(--down);font-weight:600}
+.na{color:#c3c9d4}
+.spark{width:78px;height:24px;display:block}
+
+.chartbox{height:320px;position:relative}
+.zhint{font-size:11px;color:var(--ink-3);text-align:center;margin-top:8px}
+#dragbadge{position:fixed;z-index:300;background:#12141a;color:#fff;padding:7px 12px;border-radius:8px;
+  font-size:12px;pointer-events:none;opacity:0;transition:opacity .1s;white-space:nowrap;
+  box-shadow:0 6px 20px rgba(0,0,0,.25);display:flex;align-items:center;gap:8px}
+#dragbadge.on{opacity:1}
+#dragbadge b{font-weight:600;font-variant-numeric:tabular-nums}
+#dragbadge span{color:#8b93a3;font-size:11px;border-left:1px solid #2a2f3a;padding-left:8px}
+#busy{position:fixed;inset:0;background:rgba(244,245,247,.78);backdrop-filter:blur(3px);z-index:400;display:flex;align-items:center;justify-content:center}
+#busy div{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px 26px;font-size:13px;color:var(--ink-2);
+  display:flex;align-items:center;gap:12px;box-shadow:0 10px 32px rgba(0,0,0,.10)}
+.spin{width:15px;height:15px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:1200px){.grid2{grid-template-columns:1fr}}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);background:#12141a;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:99}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.legend{font-size:11.5px;color:var(--ink-3);padding:0 18px 14px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><span class="dot"></span>日铁周报数据工具</div>
+  <div class="tabs-top">
+    <button id="nav-report" class="on" onclick="nav('report')">周报数据</button>
+    <button id="nav-query" onclick="nav('query')">自由取数</button>
+  </div>
+  <div class="right">
+    <span class="pill" id="meta">未加载数据</span>
+    <button class="btn ghost" onclick="document.getElementById('f').click()">导入底表</button>
+    <input type="file" id="f" accept=".xlsx,.xls,.csv">
+  </div>
+</div>
+
+<!-- 空态 -->
+<div id="empty" class="empty">
+  <div class="drop" onclick="document.getElementById('f').click()">
+    <div class="ico">📊</div>
+    <h2>导入周报底表</h2>
+    <p>支持 .xlsx / .csv　·　可拖拽到页面任意位置<br>自动识别 W0 起的周期并生成全部报表，数据不出浏览器</p>
+  </div>
+</div>
+
+<!-- 周报数据 -->
+<div id="report" class="shell">
+  <nav class="side">
+    <div class="grp">周报数据</div>
+    <a class="on" data-m="m-overview" onclick="showMod(this)">总览</a>
+    <a data-m="m-platform" onclick="showMod(this)">端</a>
+    <a data-m="m-locale" onclick="showMod(this)">locale</a>
+    <a data-m="m-customer" onclick="showMod(this)">新老客</a>
+  </nav>
+  <div class="main">
+
+    <!-- ── 总览 ── -->
+    <div id="m-overview" class="mod on">
+      <div class="card">
+        <div class="card-hd">
+          <h3>1.1 总览</h3><span class="sub" id="ov-sub"></span>
+          <div class="sp"></div>
+          <button class="btn" onclick="cp('t-ov')">复制表格</button>
+          <button class="btn" onclick="xl('t-ov','1.1总览')">导出 xlsx</button>
+        </div>
+        <div class="card-bd"><table id="t-ov"></table></div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd">
+          <h3>核心指标趋势</h3><span class="sub">出票成功票量（下单时间） · 列表-出票CR</span>
+          <div class="sp"></div>
+          <div class="seg" id="seg-gran">
+            <button class="on" onclick="setGran('day',this)">by 日</button>
+            <button onclick="setGran('week',this)">by 周</button>
+            <button onclick="setGran('month',this)">by 月</button>
+          </div>
+        </div>
+        <div class="card-bd"><div class="chartbox"><canvas id="c-trend"></canvas></div></div>
+      </div>
+    </div>
+
+    <!-- ── 端 ── -->
+    <div id="m-platform" class="mod">
+      <div class="card">
+        <div class="card-hd">
+          <h3>1.2.1 拆端票量</h3>
+          <div class="sp"></div>
+          <div class="seg" id="seg-pv">
+            <button onclick="setView('pv','table',this)">数据表格</button>
+            <button class="on" onclick="setView('pv','chart',this)">可视化</button>
+          </div>
+          <div class="seg" id="seg-span">
+            <button class="on" onclick="setSpan('report',this)">周报周期</button>
+            <button onclick="setSpan('all',this)">全部周期</button>
+          </div>
+          <button class="btn" onclick="cp('t-pv')">复制</button>
+          <button class="btn" onclick="xl('t-pv','拆端票量')">导出</button>
+        </div>
+        <div class="card-bd">
+          <div id="v-pv-table" style="display:none"><table id="t-pv"></table></div>
+          <div id="v-pv-chart"><div class="chartbox"><canvas id="c-pv"></canvas></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd">
+          <h3>1.2.2 拆端转化</h3>
+          <div class="seg" id="seg-pc-plat">
+            <button class="on" onclick="setPlat('pc2','app',this)">APP</button>
+            <button onclick="setPlat('pc2','pc',this)">PC</button>
+            <button onclick="setPlat('pc2','h5',this)">H5</button>
+          </div>
+          <div class="sp"></div>
+          <div class="seg" id="seg-pc2">
+            <button onclick="setView('pc2','table',this)">数据表格</button>
+            <button class="on" onclick="setView('pc2','chart',this)">可视化</button>
+          </div>
+          <button class="btn" onclick="cp('t-pc2')">复制</button>
+          <button class="btn" onclick="xl('t-pc2','拆端转化')">导出</button>
+        </div>
+        <div class="card-bd">
+          <div id="v-pc2-table" style="display:none"><table id="t-pc2"></table></div>
+          <div id="v-pc2-chart">
+            <div class="chartbox"><canvas id="c-pc2-cr"></canvas></div>
+            <div class="chartbox" style="margin-top:26px"><canvas id="c-pc2-uv"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── locale ── -->
+    <div id="m-locale" class="mod">
+      <div class="card">
+        <div class="card-hd">
+          <h3>1.3.1 拆 locale 票量（TOP10）</h3><span class="sub" id="lv-sub"></span>
+          <div class="sp"></div>
+          <div class="seg" id="seg-lv">
+            <button onclick="setView('lv','table',this)">数据表格</button>
+            <button class="on" onclick="setView('lv','chart',this)">可视化</button>
+          </div>
+          <button class="btn" onclick="cp('t-lv')">复制</button>
+          <button class="btn" onclick="xl('t-lv','拆locale票量')">导出</button>
+        </div>
+        <div class="card-bd">
+          <div id="v-lv-table" style="display:none"><table id="t-lv"></table></div>
+          <div id="v-lv-chart"><div class="chartbox"><canvas id="c-lv"></canvas></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd">
+          <h3>1.3.2 拆 locale 流量及转化（TOP5）</h3>
+          <div class="seg" id="seg-lc-plat">
+            <button class="on" onclick="setPlat('lc','app',this)">APP</button>
+            <button onclick="setPlat('lc','pc',this)">PC</button>
+            <button onclick="setPlat('lc','h5',this)">H5</button>
+          </div>
+          <div class="seg" id="seg-lc-cust">
+            <button class="on" onclick="setCust('ttl',this)">全部</button>
+            <button onclick="setCust('新客',this)">新客</button>
+            <button onclick="setCust('老客',this)">老客</button>
+          </div>
+          <div class="sp"></div>
+          <span class="sub">TOP5 取自</span>
+          <div class="seg" id="seg-lc-rank">
+            <button class="on" onclick="setRank('ttl',this)">大盘</button>
+            <button onclick="setRank('app',this)">APP</button>
+            <button onclick="setRank('pc',this)">PC</button>
+            <button onclick="setRank('h5',this)">H5</button>
+          </div>
+          <div class="seg" id="seg-lc">
+            <button onclick="setView('lc','table',this)">数据表格</button>
+            <button class="on" onclick="setView('lc','chart',this)">可视化</button>
+          </div>
+          <button class="btn" onclick="cp('t-lc')">复制</button>
+          <button class="btn" onclick="xl('t-lc','拆locale流量及转化')">导出</button>
+        </div>
+        <div class="card-bd">
+          <div id="v-lc-table" style="display:none"><table id="t-lc"></table></div>
+          <div id="v-lc-chart">
+            <div class="ctrl">
+              <span class="sub">指标</span> <select id="sel-lc" class="sel" onchange="lcChart()"></select>
+              <span class="sub" style="margin-left:12px">locale</span>
+              <input id="lc-search" class="sel" style="min-width:130px" placeholder="搜索 locale…" oninput="lcChips()">
+              <button class="btn" onclick="lcReset()">恢复 TOP5</button>
+              <button class="btn" onclick="lcClear()">清空</button>
+            </div>
+            <div class="chips" id="lc-chips"></div>
+            <div class="chartbox"><canvas id="c-lc"></canvas></div>
+          </div>
+        </div>
+        <div class="legend">口径：本周 vs 上周 行中，票量/UV 为环比增幅（a/b-1），CR 为环比变化（a-b，pp）。</div>
+      </div>
+    </div>
+
+    <!-- ── 新老客 ── -->
+    <div id="m-customer" class="mod">
+      <div class="card">
+        <div class="card-hd">
+          <h3>1.4.1 拆新老票量</h3><span class="sub" id="cv-sub"></span>
+          <div class="sp"></div>
+          <div class="seg" id="seg-cv">
+            <button onclick="setView('cv','table',this)">数据表格</button>
+            <button class="on" onclick="setView('cv','chart',this)">可视化</button>
+          </div>
+          <button class="btn" onclick="cp('t-cv')">复制</button>
+          <button class="btn" onclick="xl('t-cv','拆新老票量')">导出</button>
+        </div>
+        <div class="card-bd">
+          <div id="v-cv-table" style="display:none"><table id="t-cv"></table></div>
+          <div id="v-cv-chart"><div class="chartbox"><canvas id="c-cv"></canvas></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd">
+          <h3>1.4.2 拆新老流量及转化</h3>
+          <div class="seg" id="seg-cc-plat">
+            <button class="on" onclick="setPlat('cc','app',this)">APP</button>
+            <button onclick="setPlat('cc','pc',this)">PC</button>
+            <button onclick="setPlat('cc','h5',this)">H5</button>
+          </div>
+          <div class="sp"></div>
+          <div class="seg" id="seg-cc">
+            <button onclick="setView('cc','table',this)">数据表格</button>
+            <button class="on" onclick="setView('cc','chart',this)">可视化</button>
+          </div>
+          <button class="btn" onclick="cp('t-cc')">复制</button>
+          <button class="btn" onclick="xl('t-cc','拆新老流量及转化')">导出</button>
+        </div>
+        <div class="card-bd">
+          <div id="v-cc-table" style="display:none"><table id="t-cc"></table></div>
+          <div id="v-cc-chart">
+            <div style="margin-bottom:12px"><span class="sub">指标</span> <select id="sel-cc" class="sel" onchange="ccChart()"></select></div>
+            <div class="chartbox"><canvas id="c-cc"></canvas></div>
+          </div>
+        </div>
+        <div class="legend">口径：本周 vs 上周 行中，票量/UV 为环比增幅（a/b-1），CR 为环比变化（a-b，pp）。</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 自由取数 -->
+<div id="query" class="shell">
+  <div class="main" style="padding:28px;max-width:1600px">
+
+    <!-- 自然语言 -->
+    <div class="card">
+      <div class="card-hd"><h3>自然语言取数</h3><span class="sub">输入关键词后回车，如：APP ja_jp 列表-出票CR 6.1到6.30</span></div>
+      <div class="card-bd">
+        <input id="nlInput" class="sel" style="width:100%;min-width:0;font-size:13px;padding:10px 14px"
+          placeholder="APP ja_jp 新客 出票票量 6.1到6.30 周度"
+          onkeydown="if(event.key==='Enter')nlQuery()">
+        <div style="margin-top:8px;display:flex;gap:6px">
+          <button class="btn p" onclick="nlQuery()">查询</button>
+          <button class="btn" onclick="qReset()">重置</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 快捷按钮 -->
+    <div class="card">
+      <div class="card-hd"><h3>快捷查询</h3><div class="sp"></div><button class="btn" onclick="togglePanel()">更多筛选 ▼</button></div>
+      <div class="card-bd">
+        <div class="ctrl" style="gap:6px">
+          <span class="sub">分端</span>
+          <button class="chip" onclick="qQuick({plat:'app'})">APP</button>
+          <button class="chip" onclick="qQuick({plat:'pc'})">PC</button>
+          <button class="chip" onclick="qQuick({plat:'h5'})">H5</button>
+          <span class="sub" style="margin-left:8px">新老客</span>
+          <button class="chip" onclick="qQuick({cust:'新客'})">新客</button>
+          <button class="chip" onclick="qQuick({cust:'老客'})">老客</button>
+        </div>
+        <div class="ctrl" style="gap:6px;margin-top:8px">
+          <span class="sub">locale</span>
+          <button class="chip" onclick="qQuick({loc:'ja_jp'})">ja_jp</button>
+          <button class="chip" onclick="qQuick({loc:'ru_ru'})">ru_ru</button>
+          <button class="chip" onclick="qQuick({loc:'en_xx'})">en_xx</button>
+          <button class="chip" onclick="qQuick({loc:'zh_hk'})">zh_hk</button>
+          <button class="chip" onclick="qQuick({loc:'ko_kr'})">ko_kr</button>
+          <button class="chip" onclick="qQuick({loc:'en_gb'})">en_gb</button>
+          <button class="chip" onclick="qQuick({loc:'en_us'})">en_us</button>
+          <button class="chip" onclick="qQuick({loc:'en_au'})">en_au</button>
+          <button class="chip" onclick="qQuick({loc:'zh_tw'})">zh_tw</button>
+          <button class="chip" onclick="qQuick({loc:'en_sg'})">en_sg</button>
+        </div>
+        <div class="ctrl" style="gap:6px;margin-top:8px">
+          <span class="sub">营销渠道</span>
+          <button class="chip" onclick="qQuick({chan:'自然&其他'})">自然&其他</button>
+          <button class="chip" onclick="qQuick({chan:'投放'})">投放</button>
+          <button class="chip" onclick="qQuick({chan:'SEO'})">SEO</button>
+          <button class="chip" onclick="qQuick({chan:'Organic'})">Organic</button>
+          <button class="chip" onclick="qQuick({chan:'PPC'})">PPC</button>
+          <button class="chip" onclick="qQuick({chan:'推送'})">推送</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 结构化面板（默认折叠） -->
+    <div class="card" id="structPanel" style="display:none">
+      <div class="card-hd"><h3>结构化查询</h3><div class="sp"></div>
+        <button class="btn p" onclick="qExec()">查询</button>
+        <button class="btn" onclick="qReset()">重置</button>
+      </div>
+      <div class="card-bd">
+        <div class="ctrl" style="gap:14px">
+          <div><label class="qlbl">时间粒度</label>
+            <div class="seg" id="seg-qgran">
+              <button class="on" onclick="segOn(this);Q.gran='day'">日</button>
+              <button onclick="segOn(this);Q.gran='week'">周</button>
+              <button onclick="segOn(this);Q.gran='month'">月</button>
+            </div></div>
+          <div><label class="qlbl">开始日期</label><input class="sel" id="qStart" style="min-width:120px" placeholder="5.15"></div>
+          <div><label class="qlbl">结束日期</label><input class="sel" id="qEnd" style="min-width:120px" placeholder="7.9"></div>
+          <div><label class="qlbl">展示模式</label>
+            <div class="seg" id="seg-qmode">
+              <button class="on" onclick="segOn(this);Q.cross=false">合并聚合</button>
+              <button onclick="segOn(this);Q.cross=true">交叉展开</button>
+            </div></div>
+        </div>
+        <div class="ctrl" style="gap:14px;margin-top:14px">
+          <div style="flex:1;min-width:120px"><label class="qlbl">平台</label>
+            <select id="qPlat" class="sel" multiple size="4"><option value="ttl" selected>全部</option><option value="app">APP</option><option value="pc">PC</option><option value="h5">H5</option></select></div>
+          <div style="flex:1;min-width:120px"><label class="qlbl">新老客</label>
+            <select id="qCust" class="sel" multiple size="3"><option value="ttl" selected>全部</option><option value="新客">新客</option><option value="老客">老客</option></select></div>
+          <div style="flex:2;min-width:200px"><label class="qlbl">locale</label>
+            <select id="qLoc" class="sel" multiple size="4"><option value="ttl" selected>全部</option></select></div>
+          <div style="flex:2;min-width:200px"><label class="qlbl">营销渠道</label>
+            <select id="qChan" class="sel" multiple size="4"><option value="ttl" selected>全部</option></select></div>
+        </div>
+        <div style="margin-top:14px"><label class="qlbl">指标（可多选）</label>
+          <div class="mcols">
+            <div><span class="sub">票量</span><div class="chips" id="qMetrics-vol"></div></div>
+            <div><span class="sub">CR</span><div class="chips" id="qMetrics-cr"></div></div>
+            <div><span class="sub">UV</span><div class="chips" id="qMetrics-uv"></div></div>
+          </div></div>
+      </div>
+    </div>
+
+    <!-- 结果区 -->
+    <div id="qResult" style="display:none">
+      <div class="card">
+        <div class="card-hd">
+          <h3>查询结果</h3><span class="sub" id="qResultSub"></span>
+          <div class="sp"></div>
+          <div class="seg" id="seg-qview">
+            <button class="on" onclick="setQView('chart',this)">可视化</button>
+            <button onclick="setQView('table',this)">数据表格</button>
+          </div>
+          <button class="btn" onclick="cp('t-qr')">复制</button>
+          <button class="btn" onclick="xl('t-qr','查询结果')">导出</button>
+        </div>
+        <div class="card-bd">
+          <div id="v-qr-chart"><div class="chartbox"><canvas id="c-qr"></canvas></div></div>
+          <div id="v-qr-table" style="display:none"><table id="t-qr"></table></div>
+        </div>
+        <div class="card-bd" style="border-top:1px solid var(--line-2)">
+          <div class="ctrl" style="gap:14px;flex-wrap:wrap">
+            <div><label class="qlbl">追加平台</label>
+              <div class="ctrl" style="gap:4px" id="qAddPlat"></div></div>
+            <div><label class="qlbl">追加 locale</label>
+              <div class="ctrl" style="gap:4px"><input id="qAddLocInput" class="sel" style="min-width:100px;width:120px" placeholder="搜索…" oninput="renderAddLoc()"><div class="chips" id="qAddLoc" style="max-height:60px"></div></div></div>
+            <div><label class="qlbl">追加新老客</label>
+              <div class="ctrl" style="gap:4px" id="qAddCust"></div></div>
+            <div><label class="qlbl">追加营销渠道</label>
+              <div class="ctrl" style="gap:4px"><input id="qAddChanInput" class="sel" style="min-width:100px;width:120px" placeholder="搜索…" oninput="renderAddChan()"><div class="chips" id="qAddChan" style="max-height:60px"></div></div></div>
+          </div>
+          <div style="margin-top:10px"><label class="qlbl">追加指标</label>
+            <div class="chips" id="qAddMetrics" style="max-height:80px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═════════ 列名 ═════════ */
+const C={
+  date:'日期 Date', pl:'国家地区产线 Country/Region Production Line', plat:'平台 Platform',
+  region:'地区 Region', sys:'系统 System', loc:'语言地区 Language Region',
+  chan:'营销渠道 Marketing Channel', cust:'产线新老客 Production Line New and Returning Customers',
+  uvHome:'首页UV Homepage UV', uvList:'列表页UV List Page UV', uvSeat:'席位页UV Seat Page UV',
+  uvForm:'填写页UV Form Page UV', uvOrder:'订单详情页UV  Order Details Page UV',
+  uvSubmit:'提交成功UV Submission Success UV', uvPay:'支付成功UV Payment Success UV',
+  uvTicket:'出票成功UV Ticket Issuance Success UV',
+  tk:'出票成功票量（下单时间）Ticket Issuance Success Ticket Volume (Order Time)',
+  crHL:'首页-列表cr Homepage to List Conversion Rate',
+  crLS:'列表-席位cr List to Seat Conversion Rate',
+  crSF:'席位-填写cr Seat to Form Conversion Rate',
+  crLF:'列表-填写cr List to Form Conversion Rate',
+  crFS:'填写-提交成功cr Form to Submission Success Conversion Rate',
+  crST:'提交成功-出票成功（下单时间）cr Submission Success to Ticket Issuance Success (Order Time) Conversion Rate',
+  crLT:'列表-出票成功（下单时间）cr List to Ticket Issuance Success (Order Time) Conversion Rate'
+};
+/* 转化指标（1.2.2 全量）。derive = 由 UV 求和相除派生 */
+const CR_FULL=[
+  {n:'列表-出票CR',f:C.crLT},
+  {n:'首页-列表CR',f:C.crHL},
+  {n:'列表-席位CR',f:C.crLS},
+  {n:'席位-填写CR',f:C.crSF},
+  {n:'列表-填写CR',f:C.crLF},
+  {n:'填写-提交成功CR',f:C.crFS},
+  {n:'提交-支付CR',derive:[C.uvPay,C.uvSubmit]},
+  {n:'支付-出票CR',derive:[C.uvTicket,C.uvPay]},
+  {n:'提交成功-出票成功 CR',f:C.crST}
+];
+const UV_FULL=[
+  {n:'首页UV',f:C.uvHome},{n:'列表页UV',f:C.uvList},{n:'席位页UV',f:C.uvSeat},
+  {n:'填写页UV',f:C.uvForm},{n:'提交成功UV',f:C.uvSubmit},{n:'支付成功UV',f:C.uvPay},
+  {n:'出票成功UV',f:C.uvTicket},{n:'订单详情页UV',f:C.uvOrder}
+];
+/* 1.3.2 / 1.4.2 用的 CR 列 */
+const CR_SUB=[
+  {n:'列表-出票成功',f:C.crLT},{n:'首页-列表cr',f:C.crHL},{n:'列表-席位cr',f:C.crLS},
+  {n:'席位-填写cr',f:C.crSF},{n:'列表-填写cr',f:C.crLF},{n:'填写-提交成功cr',f:C.crFS}
+];
+const CR_SUB_C=[...CR_SUB,{n:'提交成功-出票成功',f:C.crST}]; // 1.4.2 多一列
+
+/* ═════════ 状态 ═════════ */
+let DATA=null, WEEKS=[], MONTHS=[], DAYS=[];
+const S={gran:'day',span:'report',pv:'chart',pc2:'chart',lv:'chart',cv:'chart',lc:'chart',cc:'chart',
+         plat:{pc2:'app',lc:'app',cc:'app'},cust:{lc:'ttl'},rank:'ttl'};
+const CH={};
+
+/* ═════════ 工具 ═════════ */
+const N=v=>{const x=parseFloat(v);return isNaN(x)?0:x;};
+const fmtInt=v=>Math.round(v).toLocaleString('en-US');
+const fmtPct=v=>(v*100).toFixed(2)+'%';
+const md=d=>`${d.getMonth()+1}.${d.getDate()}`;
+function delta(v,pct){ // pct=true → 百分比；否则 pp
+  if(v===null||!isFinite(v))return '<span class="na">-</span>';
+  const s=(v*100).toFixed(2)+'%';
+  return `<span class="${v>=0?'up':'dn'}">${v>=0?'':''}${s}</span>`;
+}
+function growth(cur,prev){return prev>0?cur/prev-1:null;}
+
+function parseD(v){
+  if(v instanceof Date)return v;
+  if(typeof v==='number'){                    // Excel 序列号（1900 制）
+    const d=new Date(Date.UTC(1899,11,30)+v*864e5);
+    return new Date(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate());
+  }
+  const s=String(v).trim();
+  let m=s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);
+  if(m)return new Date(+m[1],+m[2]-1,+m[3]);
+  return new Date(s);
+}
+
+/* ═════════ 数据层：紧凑索引 ═════════
+   不保留原始行对象（20万行 × 30个字符串键 ≈ 500MB，必崩）。
+   解析时直接聚合成 Float64Array 槽位，之后所有取数 O(1) 查表。   */
+const SLOT={};                                   // 列名 → 槽位
+SLOT[C.tk]=0;
+UV_FULL.forEach((u,i)=>SLOT[u.f]=1+i);           // 1..8
+const CR_BASE=[C.crLT,C.crHL,C.crLS,C.crSF,C.crLF,C.crFS,C.crST];
+CR_BASE.forEach((f,i)=>SLOT[f]=9+i);             // 9..15
+const NSLOT=16, WID=17;                          // 16 = 行数（给 CR 求日均用）
+const ZERO=new Float64Array(WID);
+
+let AD=new Map(), AW=new Map(), AM=new Map();    // 日 / 周 / 月 聚合
+let LOCSET=new Set(), CHANSET=new Set();
+
+const key=(t,p,l,c,ch)=>t+'\u0001'+p+'\u0001'+l+'\u0001'+c+'\u0001'+(ch||'ttl');
+function bump(M,k){let a=M.get(k);if(!a){a=new Float64Array(WID);M.set(k,a);}return a;}
+
+/* 取聚合桶（缺失返回全零，调用方无需判空） */
+function rows(w,plat='ttl',loc='ttl',cust='ttl',ch='ttl'){return AW.get(key(w.i,plat,loc,cust,ch))||ZERO;}
+function rowsD(dk,plat='ttl',loc='ttl',cust='ttl',ch='ttl'){return AD.get(key(dk,plat,loc,cust,ch))||ZERO;}
+function rowsM(mi,plat='ttl',loc='ttl',cust='ttl',ch='ttl'){return AM.get(key(mi,plat,loc,cust,ch))||ZERO;}
+
+/* 量/UV = 求和；底表 CR = 日均；派生 CR = UV 求和相除 */
+const SUM=(a,f)=>a[SLOT[f]]||0;
+const AVG=(a,f)=>a[NSLOT]?a[SLOT[f]]/a[NSLOT]:0;
+function metric(a,m){
+  if(m.derive){const d=a[SLOT[m.derive[1]]];return d>0?a[SLOT[m.derive[0]]]/d:0;}
+  return AVG(a,m.f);
+}
+
+/* 当前区间内的所有日期 */
+function days(){
+  const ws=span(),a=+ws[0].s,b=+ws.at(-1).e;
+  return DAYS.filter(d=>d.k>=a&&d.k<=b);
+}
+function seriesD(m,plat='ttl',loc='ttl',cust='ttl',pct=false){
+  return days().map(d=>{
+    const a=AD.get(key(d.k,plat,loc,cust));
+    if(!a)return null;
+    const v=m.vol?a[0]:(m.uv?a[SLOT[m.f]]:metric(a,m));
+    return pct?v*100:v;
+  });
+}
+
+/* ═════════ 加载 ═════════ */
+const veil=document.createElement('div');
+veil.id='veil';veil.innerHTML='<div>松手即可导入底表</div>';
+document.body.appendChild(veil);
+let dragDepth=0;
+window.addEventListener('dragenter',e=>{if(![...e.dataTransfer.types].includes('Files'))return;dragDepth++;veil.classList.add('on');});
+window.addEventListener('dragover',e=>e.preventDefault());
+window.addEventListener('dragleave',()=>{if(--dragDepth<=0){dragDepth=0;veil.classList.remove('on');}});
+window.addEventListener('drop',e=>{e.preventDefault();dragDepth=0;veil.classList.remove('on');
+  if(e.dataTransfer.files[0])read(e.dataTransfer.files[0]);});
+document.getElementById('f').onchange=e=>{if(e.target.files[0])read(e.target.files[0]);e.target.value='';};
+
+function read(file){
+  const t0=performance.now();
+  setBusy(`正在解析 ${file.name}…`);
+  const fr=new FileReader();
+  fr.onerror=()=>{setBusy(null);alert('文件读取失败');};
+  fr.onload=e=>{
+    setTimeout(()=>{                       // 让加载态先渲染出来
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',dense:true,cellDates:false,cellStyles:false,cellNF:false,cellHTML:false});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      let aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null,blankrows:false});
+      wb.Sheets[wb.SheetNames[0]]=null;    // 尽早释放
+      if(!aoa.length)throw new Error('工作表为空');
+
+      const head=aoa[0].map(x=>String(x==null?'':x).trim());
+      const at=n=>{const i=head.indexOf(n);if(i<0)throw new Error('缺少列：'+n);return i;};
+      const iDate=at(C.date),iPlat=at(C.plat),iReg=at(C.region),iSys=at(C.sys),
+            iLoc=at(C.loc),iChan=at(C.chan),iCust=at(C.cust);
+      const cols=Object.keys(SLOT).map(f=>[at(f),SLOT[f]]);   // [列下标, 槽位]
+
+      const AD2=new Map(),locs=new Set(),chans=new Set(),dayset=new Map();
+      let kept=0;
+      for(let r=1;r<aoa.length;r++){
+        const row=aoa[r];
+        if(!row||row[iDate]==null)continue;
+        if(row[iReg]!=='ttl'||row[iSys]!=='ttl')continue;  // 地区/系统恒 ttl
+        const d=parseD(row[iDate]);
+        if(isNaN(d))continue;
+        const dk=+new Date(d.getFullYear(),d.getMonth(),d.getDate());
+        if(!dayset.has(dk))dayset.set(dk,new Date(dk));
+        const p=row[iPlat],l=row[iLoc],c=row[iCust],ch=row[iChan];
+        if(l!=='ttl')locs.add(l);
+        if(ch!=='ttl')chans.add(ch);
+        const a=bump(AD2,key(dk,p,l,c,ch));
+        for(let j=0;j<cols.length;j++){
+          const v=+row[cols[j][0]];
+          if(!isNaN(v))a[cols[j][1]]+=v;
+        }
+        a[NSLOT]+=1;
+        kept++;
+      }
+      aoa=null;                            // 释放 AOA
+      if(!kept)throw new Error('没有可用数据行（地区/系统/营销渠道 需为 ttl）');
+
+      AD=AD2;LOCSET=locs;CHANSET=chans;
+      DAYS=[...dayset.entries()].sort((a,b)=>a[0]-b[0]).map(([k,d])=>({k,d,label:md(d)}));
+      buildWeeks();                        // 由 DAYS 推周期
+      rollUp();                            // 日 → 周 / 月
+
+      Object.values(CH).forEach(c=>c.destroy());Object.keys(CH).forEach(k=>delete CH[k]);
+      DATA=1;
+      S.span='report';S.gran='day';S.rank='ttl';S.cust.lc='ttl';LC_SEL=null;
+      document.getElementById('lc-search').value='';
+      syncShell();
+      const ms=Math.round(performance.now()-t0);
+      document.getElementById('meta').textContent=
+        `${file.name}　·　${WEEKS.length} 周　${md(WEEKS[0].s)}–${md(WEEKS.at(-1).e)}　·　${kept.toLocaleString()} 行　·　${ms}ms`;
+      renderAll();
+      initQueryPanel();
+      setBusy(null);
+      toast(`已加载 ${kept.toLocaleString()} 行 / ${WEEKS.length} 周（${ms}ms）`);
+    }catch(err){
+      setBusy(null);
+      alert('解析失败：'+err.message+
+        (/memory|Array buffer allocation|Invalid string length/i.test(err.message)
+          ? '\n\n文件过大导致浏览器内存不足。建议：\n· 用 Chrome/Edge 打开（内存上限更高）\n· 或先把底表另存为 .csv 再导入（体积和内存占用小很多）'
+          : ''));
+    }},30);
+  };
+  fr.readAsArrayBuffer(file);
+}
+
+/* 日 → 周 / 月 上卷 */
+function rollUp(){
+  AW=new Map();AM=new Map();
+  const w4=new Map();                       // dayKey → weekIdx
+  WEEKS.forEach(w=>DAYS.forEach(d=>{if(d.k>=+w.s&&d.k<=+w.e)w4.set(d.k,w.i);}));
+  for(const [k,a] of AD){
+    const p=k.split('\u0001');
+    const dk=+p[0];
+    const wi=w4.get(dk);
+    const d=new Date(dk), mi=d.getFullYear()*12+d.getMonth();
+    if(wi!==undefined){
+      const t=bump(AW,key(wi,p[1],p[2],p[3],p[4]));
+      for(let i=0;i<WID;i++)t[i]+=a[i];
+    }
+    const t2=bump(AM,key(mi,p[1],p[2],p[3],p[4]));
+    for(let i=0;i<WID;i++)t2[i]+=a[i];
+  }
+  const ms=new Set();DAYS.forEach(d=>ms.add(d.d.getFullYear()*12+d.d.getMonth()));
+  MONTHS=[...ms].sort((x,y)=>x-y).map(k=>({k,label:`${k%12+1}月`}));
+}
+
+/* 加载态 */
+function setBusy(msg){
+  let b=document.getElementById('busy');
+  if(!msg){b&&b.remove();return;}
+  if(!b){b=document.createElement('div');b.id='busy';document.body.appendChild(b);}
+  b.innerHTML=`<div><span class="spin"></span>${msg}</div>`;
+}
+/* 空态 / 内容切换 */
+function syncShell(){
+  const onQuery=document.getElementById('nav-query').classList.contains('on');
+  const has=!!DATA;
+  document.getElementById('empty').classList.toggle('on',!has&&!onQuery);
+  document.getElementById('report').classList.toggle('on',has&&!onQuery);
+  document.getElementById('query').classList.toggle('on',onQuery);
+}
+
+/* 周期：以数据所在年份的 5.15 为 W0 锚点，每 7 天一周 */
+let W0_IDX=0;   // WEEKS 数组中，5.15 那一周对应的下标
+function buildWeeks(){
+  const min=DAYS[0].d, max=DAYS.at(-1).d;
+  // 找到数据范围内（或之前最近）的 5.15 作为锚点
+  let a;
+  for(let yr=max.getFullYear();yr>=min.getFullYear()-1;yr--){
+    const candidate=new Date(yr,4,15);
+    if(candidate<=max){a=candidate;break;}
+  }
+  const anchor=+a;                                 // 锚点时间戳
+  // 回推到包含最早数据的周
+  while(+a+6*864e5<+min)a.setDate(a.getDate()+7);
+  while(a>min)a.setDate(a.getDate()-7);
+  WEEKS=[];let i=0;W0_IDX=0;
+  const has=(s,e)=>DAYS.some(d=>d.k>=+s&&d.k<=+e);
+  while(a<=max){
+    const s=new Date(a),e=new Date(+a+6*864e5);
+    if(has(s,e)){
+      if(+s===anchor)W0_IDX=WEEKS.length;          // 标记锚点位置
+      WEEKS.push({i:i,s,e,tag:`W${i-0}`,rng:`${md(s)}-${md(e)}`,label:`W${i}：${md(s)}-${md(e)}`});
+      i++;
+    }
+    a.setDate(a.getDate()+7);
+  }
+  // 重新编号：W0 = 锚点那一周
+  WEEKS.forEach((w,idx)=>{
+    const n=idx-W0_IDX;
+    w.tag=n>=0?`W${n}`:`W${n}`;
+    w.label=n>=0?`W${n}：${w.rng}`:`${w.rng}`;
+  });
+}
+const span=()=>S.span==='report'?WEEKS.slice(W0_IDX):WEEKS;
+const last2=()=>WEEKS.slice(-2);
+
+/* ═════════ 渲染入口 ═════════ */
+function renderAll(){
+  ovTable();trendChart();
+  pvTable();pvChart();
+  pc2Table();pc2Chart();
+  lvTable();lvChart();
+  lcTable();lcChips();lcChart();
+  cvTable();cvChart();
+  ccTable();ccChart();
+}
+
+/* ── 1.1 总览 ── */
+function ovTable(){
+  const [a,b]=last2();
+  const ra=rows(a),rb=rows(b);
+  const ta=SUM(ra,C.tk),tb=SUM(rb,C.tk);
+  const ca=AVG(ra,C.crLT),cb=AVG(rb,C.crLT);
+  document.getElementById('ov-sub').textContent=`上周 ${a.rng}　本周 ${b.rng}`;
+  document.getElementById('t-ov').innerHTML=`
+  <thead><tr><th>日期</th><th>端</th><th>出票成功票量</th><th>列表-出票CR</th></tr></thead>
+  <tbody>
+    <tr><td>上周（${a.rng}）</td><td>大盘</td><td>${fmtInt(ta)}</td><td>${fmtPct(ca)}</td></tr>
+    <tr><td>本周（${b.rng}）</td><td>大盘</td><td>${fmtInt(tb)}</td><td>${fmtPct(cb)}</td></tr>
+    <tr class="tot"><td>本周 vs 上周</td><td>大盘</td><td>${delta(growth(tb,ta))}</td><td>${delta(cb-ca)}</td></tr>
+  </tbody>`;
+}
+
+function trendChart(){
+  let labels,tk,cr;
+  if(S.gran==='day'){
+    const D=DAYS;
+    labels=D.map(d=>d.label);
+    tk=D.map(d=>SUM(rowsD(d.k),C.tk));
+    cr=D.map(d=>AVG(rowsD(d.k),C.crLT)*100);
+  }else if(S.gran==='week'){
+    labels=WEEKS.map(w=>w.label);
+    tk=WEEKS.map(w=>SUM(rows(w),C.tk));
+    cr=WEEKS.map(w=>AVG(rows(w),C.crLT)*100);
+  }else{
+    labels=MONTHS.map(m=>m.label);
+    tk=MONTHS.map(m=>SUM(rowsM(m.k),C.tk));
+    cr=MONTHS.map(m=>AVG(rowsM(m.k),C.crLT)*100);
+  }
+  dual('c-trend',labels,
+    {label:'出票成功票量',data:tk},
+    {label:'列表-出票CR (%)',data:cr});
+}
+
+/* ── 1.2.1 拆端票量 ── */
+const PLATS=[{k:'ttl',n:'总'},{k:'app',n:'APP'},{k:'pc',n:'PC'},{k:'h5',n:'H5'}];
+function weekLabel(w){
+  return S.span==='report' ? w.label : w.rng;   // 周报周期带 W 标记，全部周期只有日期
+}
+function wowLabel(ws){
+  if(ws.length<2)return '-';
+  const a=ws.at(-1),b=ws.at(-2);
+  return S.span==='report' ? `${a.tag} vs ${b.tag}` : `${a.rng} vs ${b.rng}`;
+}
+function pvTable(){
+  const ws=span();
+  let h=`<thead>
+    <tr><th>by周</th>${ws.map(()=>'<th></th>').join('')}<th></th><th></th></tr>
+    <tr><th>核心指标</th><th>趋势图</th>${ws.map(w=>`<th>${weekLabel(w)}</th>`).join('')}<th>${wowLabel(ws)}</th></tr>
+  </thead><tbody>`;
+  PLATS.forEach(p=>{
+    const v=ws.map(w=>SUM(rows(w,p.k),C.tk));
+    h+=`<tr><td>出票成功票量（${p.n}）</td><td>${spark(v)}</td>${v.map(x=>`<td>${fmtInt(x)}</td>`).join('')}<td>${delta(growth(v.at(-1),v.at(-2)))}</td></tr>`;
+  });
+  document.getElementById('t-pv').innerHTML=h+'</tbody>';
+}
+function pvChart(){
+  const L=days().map(d=>d.label);
+  multi('c-pv',L,PLATS.map(p=>({label:p.n,data:seriesD({vol:true},p.k)})),'出票成功票量（按日）');
+}
+
+/* ── 1.2.2 拆端转化 ── */
+function pc2Table(){
+  const ws=span(),p=S.plat.pc2;
+  let h=`<thead>
+    <tr><th>by周</th>${ws.map(()=>'<th></th>').join('')}<th></th><th></th><th></th></tr>
+    <tr><th>核心指标</th><th>趋势图</th>${ws.map(w=>`<th>${weekLabel(w)}</th>`).join('')}<th>${wowLabel(ws)}</th><th></th></tr>
+  </thead><tbody>`;
+  h+=`<tr class="band"><td>转化指标</td><td></td>${ws.map(()=>'<td></td>').join('')}<td>环比变化（pp）</td><td>环比增幅（%）</td></tr>`;
+  CR_FULL.forEach(m=>{
+    const v=ws.map(w=>metric(rows(w,p),m));
+    const a=v.at(-2),b=v.at(-1);
+    h+=`<tr><td>${m.n}</td><td>${spark(v)}</td>${v.map(x=>`<td>${x?fmtPct(x):'<span class="na">-</span>'}</td>`).join('')}<td>${delta(b-a)}</td><td>${delta(growth(b,a))}</td></tr>`;
+  });
+  h+=`<tr class="band grpstart"><td>流量指标</td><td></td>${ws.map(()=>'<td></td>').join('')}<td></td><td></td></tr>`;
+  UV_FULL.forEach(m=>{
+    const v=ws.map(w=>SUM(rows(w,p),m.f));
+    h+=`<tr><td>${m.n}</td><td>${spark(v)}</td>${v.map(x=>`<td>${fmtInt(x)}</td>`).join('')}<td>${delta(growth(v.at(-1),v.at(-2)))}</td><td class="na"></td></tr>`;
+  });
+  document.getElementById('t-pc2').innerHTML=h+'</tbody>';
+}
+function pc2Chart(){
+  const p=S.plat.pc2,L=days().map(d=>d.label);
+  multi('c-pc2-cr',L,CR_FULL.map(m=>({label:m.n,data:seriesD(m,p,'ttl','ttl',true)})),'转化指标（按日，%）');
+  multi('c-pc2-uv',L,UV_FULL.map(m=>({label:m.n,data:seriesD({...m,uv:true},p)})),'流量指标（按日）');
+}
+
+/* ── 1.3.1 拆locale票量 TOP10 ── */
+function topLocales(w,n,rankPlat='ttl'){
+  return [...LOCSET].map(l=>({l,v:SUM(rows(w,rankPlat,l),C.tk)}))
+    .sort((a,b)=>b.v-a.v).slice(0,n).map(x=>x.l);
+}
+function lvTable(){
+  const [pw,cw]=last2();
+  document.getElementById('lv-sub').textContent=`本周 ${cw.rng} · WOW vs ${pw.rng} · 按大盘票量排序`;
+  const tops=topLocales(cw,10,'ttl');
+  let h=`<thead><tr><th></th><th>app</th><th>WOW</th><th>PC</th><th>WOW</th><th>H5</th><th>WOW</th></tr></thead><tbody>`;
+  tops.forEach(l=>{
+    h+=`<tr><td>${l}</td>`;
+    ['app','pc','h5'].forEach(p=>{
+      const c=SUM(rows(cw,p,l),C.tk),v=SUM(rows(pw,p,l),C.tk);
+      h+=`<td>${fmtInt(c)}</td><td>${delta(growth(c,v))}</td>`;
+    });
+    h+='</tr>';
+  });
+  document.getElementById('t-lv').innerHTML=h+'</tbody>';
+}
+function lvChart(){
+  const cw=WEEKS.at(-1),tops=topLocales(cw,10,'ttl'),PS=['app','pc','h5'];
+  // nums[locale][platform] 各端票量；denoms[platform] 该端全 locale 总票量（大盘）
+  const nums=tops.map(l=>PS.map(p=>SUM(rows(cw,p,l),C.tk)));
+  const denoms=PS.map(p=>SUM(rows(cw,p),C.tk));
+  bars('c-lv',tops,PS.map((p,i)=>({label:p.toUpperCase(),data:tops.map((l,li)=>nums[li][i])})),{nums,denoms});
+}
+
+/* ── 1.3.2 拆locale流量及转化 TOP5 ── */
+function lcTable(){
+  const [pw,cw]=last2(),p=S.plat.lc,cu=S.cust.lc;
+  const tops=topLocales(cw,5,S.rank);
+  const PN=p.toUpperCase()+'大盘'+(cu==='ttl'?'':'·'+cu);
+  const cols=[...CR_SUB],uvs=UV_FULL;
+  let h=`<thead><tr><th>日期</th><th>locale</th><th>出票成功票量（下单时间）</th><th>转化指标</th>
+    ${cols.map(c=>`<th>${c.n}</th>`).join('')}<th>流量指标</th>${uvs.map(u=>`<th>${u.n}</th>`).join('')}</tr></thead><tbody>`;
+
+  const line=(dateLab,name,mode,rc,rp)=>{
+    let t='';
+    if(mode==='wow'){
+      t=`<td>${delta(growth(SUM(rc,C.tk),SUM(rp,C.tk)))}</td><td class="na"></td>`
+       +cols.map(c=>`<td>${delta(metric(rc,c)-metric(rp,c))}</td>`).join('')
+       +`<td class="na"></td>`
+       +uvs.map(u=>`<td>${delta(growth(SUM(rc,u.f),SUM(rp,u.f)))}</td>`).join('');
+    }else{
+      t=`<td>${fmtInt(SUM(rc,C.tk))}</td><td class="na"></td>`
+       +cols.map(c=>`<td>${fmtPct(metric(rc,c))}</td>`).join('')
+       +`<td class="na"></td>`
+       +uvs.map(u=>`<td>${fmtInt(SUM(rc,u.f))}</td>`).join('');
+    }
+    return `<tr class="${name.includes('大盘')?'tot':''}"><td>${dateLab}</td><td>${name}</td>${t}</tr>`;
+  };
+  const R=(w,l)=>rows(w,p,l,cu);
+
+  h+=line('本周 vs 上周',PN,'wow',R(cw,'ttl'),R(pw,'ttl'));
+  tops.forEach(l=>h+=line('',l,'wow',R(cw,l),R(pw,l)));
+  h+=line(`上周（${pw.rng}）`,PN,'abs',R(pw,'ttl'));
+  tops.forEach(l=>h+=line('',l,'abs',R(pw,l)));
+  h+=line(`本周（${cw.rng}）`,PN,'abs',R(cw,'ttl'));
+  tops.forEach(l=>h+=line('',l,'abs',R(cw,l)));
+
+  document.getElementById('t-lc').innerHTML=h+'</tbody>';
+}
+
+/* 1.3.2 可视化：端大盘 + 自选 locale（默认 TOP5），日粒度 */
+const LC_METRICS=[{n:'出票成功票量（下单时间）',vol:true},...CR_SUB.map(c=>({...c,isCR:true})),...UV_FULL.map(u=>({...u,uv:true}))];
+let LC_SEL=null;   // null = 跟随 TOP5
+
+/* 本周全部 locale，按当前排序端的票量降序 */
+function allLocales(){
+  const w=WEEKS.at(-1);
+  return [...LOCSET].map(l=>({l,v:SUM(rows(w,S.rank,l),C.tk)})).sort((a,b)=>b.v-a.v);
+}
+function lcPicked(){
+  return LC_SEL ? LC_SEL : topLocales(WEEKS.at(-1),5,S.rank);
+}
+function lcChips(){
+  const box=document.getElementById('lc-chips');
+  const q=(document.getElementById('lc-search').value||'').trim().toLowerCase();
+  const picked=lcPicked();
+  const list=allLocales().filter(x=>!q||x.l.toLowerCase().includes(q));
+  box.innerHTML=list.map(x=>{
+    const on=picked.includes(x.l);
+    const i=picked.indexOf(x.l);
+    const c=on?PAL[(i+1)%PAL.length]:'transparent';
+    return `<button class="chip ${on?'on':''}" onclick="lcToggle('${x.l}')">
+      <span class="sw" style="background:${c}"></span>${x.l}<span class="v">${fmtInt(x.v)}</span></button>`;
+  }).join('') || '<span class="sub">无匹配</span>';
+}
+function lcToggle(l){
+  const cur=[...lcPicked()];
+  const i=cur.indexOf(l);
+  if(i>=0)cur.splice(i,1);
+  else{ if(cur.length>=8){toast('最多同时对比 8 个 locale');return;} cur.push(l); }
+  LC_SEL=cur;
+  lcChips();lcChart();
+}
+function lcReset(){LC_SEL=null;lcChips();lcChart();toast('已恢复 TOP5');}
+function lcClear(){LC_SEL=[];lcChips();lcChart();}
+
+function lcChart(){
+  const sel=document.getElementById('sel-lc');
+  if(!sel.options.length)LC_METRICS.forEach((m,i)=>sel.add(new Option(m.n,i)));
+  const m=LC_METRICS[+sel.value||0],p=S.plat.lc,cu=S.cust.lc;
+  const picked=lcPicked();
+  const L=days().map(d=>d.label);
+  const tag=(cu==='ttl'?'':'·'+cu);
+  multi('c-lc',L,[{label:p.toUpperCase()+'大盘'+tag,data:seriesD(m,p,'ttl',cu,!!m.isCR)},
+    ...picked.map(l=>({label:l,data:seriesD(m,p,l,cu,!!m.isCR)}))],
+    m.n+(m.isCR?'（按日，%）':'（按日）')+(cu==='ttl'?'':' · '+cu));
+}
+
+/* ── 1.4.1 拆新老票量 ── */
+const CUSTS=[{k:'ttl',n:'总'},{k:'新客',n:'新客'},{k:'老客',n:'老客'}];
+function cvTable(){
+  const [pw,cw]=last2();
+  document.getElementById('cv-sub').textContent=`本周 ${cw.rng} · WOW vs ${pw.rng}`;
+  let h=`<thead><tr><th></th><th>所有端票量和</th><th>WOW</th><th>app</th><th>WOW</th><th>PC</th><th>WOW</th><th>H5</th><th>WOW</th></tr></thead><tbody>`;
+  CUSTS.forEach(c=>{
+    h+=`<tr class="${c.k==='ttl'?'tot':''}"><td>${c.n}</td>`;
+    ['ttl','app','pc','h5'].forEach(p=>{
+      const cur=SUM(rows(cw,p,'ttl',c.k),C.tk),prv=SUM(rows(pw,p,'ttl',c.k),C.tk);
+      h+=`<td>${fmtInt(cur)}</td><td>${delta(growth(cur,prv))}</td>`;
+    });
+    h+='</tr>';
+  });
+  document.getElementById('t-cv').innerHTML=h+'</tbody>';
+}
+function cvChart(){
+  const L=days().map(d=>d.label);
+  multi('c-cv',L,CUSTS.map(c=>({label:c.n,data:seriesD({vol:true},'ttl','ttl',c.k)})),'出票成功票量（大盘，按日）');
+}
+
+/* 1.4.2 可视化：端大盘 / 新客 / 老客，日粒度 */
+const CC_METRICS=[{n:'出票成功票量（下单时间）',vol:true},...CR_SUB_C.map(c=>({...c,isCR:true})),...UV_FULL.map(u=>({...u,uv:true}))];
+function ccChart(){
+  const sel=document.getElementById('sel-cc');
+  if(!sel.options.length)CC_METRICS.forEach((m,i)=>sel.add(new Option(m.n,i)));
+  const m=CC_METRICS[+sel.value||0],p=S.plat.cc,L=days().map(d=>d.label);
+  multi('c-cc',L,CUSTS.map(c=>({label:c.k==='ttl'?p.toUpperCase()+'大盘':c.n,
+    data:seriesD(m,p,'ttl',c.k,!!m.isCR)})),
+    m.n+(m.isCR?'（按日，%）':'（按日）'));
+}
+
+/* ── 1.4.2 拆新老流量及转化 ── */
+function ccTable(){
+  const [pw,cw]=last2(),p=S.plat.cc,PN=p.toUpperCase()+'大盘';
+  const cols=CR_SUB_C,uvs=UV_FULL;
+  let h=`<thead><tr><th>日期</th><th>新老客</th><th>出票成功票量（下单时间）</th><th>转化指标</th>
+    ${cols.map(c=>`<th>${c.n}</th>`).join('')}<th>流量指标</th>${uvs.map(u=>`<th>${u.n}</th>`).join('')}</tr></thead><tbody>`;
+
+  const line=(dl,name,mode,rc,rp)=>{
+    let t;
+    if(mode==='wow'){
+      t=`<td>${delta(growth(SUM(rc,C.tk),SUM(rp,C.tk)))}</td><td class="na"></td>`
+       +cols.map(c=>`<td>${delta(metric(rc,c)-metric(rp,c))}</td>`).join('')+`<td class="na"></td>`
+       +uvs.map(u=>`<td>${delta(growth(SUM(rc,u.f),SUM(rp,u.f)))}</td>`).join('');
+    }else{
+      t=`<td>${fmtInt(SUM(rc,C.tk))}</td><td class="na"></td>`
+       +cols.map(c=>`<td>${fmtPct(metric(rc,c))}</td>`).join('')+`<td class="na"></td>`
+       +uvs.map(u=>`<td>${fmtInt(SUM(rc,u.f))}</td>`).join('');
+    }
+    return `<tr class="${name.includes('大盘')?'tot':''}"><td>${dl}</td><td>${name}</td>${t}</tr>`;
+  };
+  const R=(w,c)=>rows(w,p,'ttl',c);
+
+  h+=line('本周 vs 上周',PN,'wow',R(cw,'ttl'),R(pw,'ttl'));
+  h+=line('','新客','wow',R(cw,'新客'),R(pw,'新客'));
+  h+=line('','老客','wow',R(cw,'老客'),R(pw,'老客'));
+  h+=line(`上周（${pw.rng}）`,PN,'abs',R(pw,'ttl'));
+  h+=line('','新客','abs',R(pw,'新客'));
+  h+=line('','老客','abs',R(pw,'老客'));
+  h+=line(`本周（${cw.rng}）`,PN,'abs',R(cw,'ttl'));
+  h+=line('','新客','abs',R(cw,'新客'));
+  h+=line('','老客','abs',R(cw,'老客'));
+
+  document.getElementById('t-cc').innerHTML=h+'</tbody>';
+}
+
+/* ═════════ 图表 ═════════ */
+const PAL=['#4f46e5','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#64748b'];
+/* 拖选放大某段日期，双击还原 */
+const ZOOM={zoom:{drag:{enabled:true,backgroundColor:'rgba(79,70,229,.10)',borderColor:'#4f46e5',borderWidth:1},mode:'x'}};
+const baseOpt={responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+  plugins:{legend:{position:'bottom',labels:{boxWidth:9,boxHeight:9,usePointStyle:true,pointStyle:'circle',font:{size:11},padding:14}},
+           tooltip:{backgroundColor:'#12141a',padding:10,cornerRadius:6,titleFont:{size:12},bodyFont:{size:12},
+                    filter:(item,i,arr,data)=>!(item.chart&&item.chart.$drag)},
+           zoom:ZOOM},
+  scales:{x:{grid:{display:false},ticks:{font:{size:10.5},color:'#8b95a3',autoSkip:true,maxRotation:0,maxTicksLimit:14}},
+          y:{border:{display:false},grid:{color:'#f1f3f7'},ticks:{font:{size:10.5},color:'#8b95a3'}}}};
+function kill(id){if(CH[id])CH[id].destroy();}
+function pr(n){return n>40?0:n>20?2:3;}
+/* 双击还原 + 拖选时实时显示起止日期 */
+const badge=document.createElement('div');badge.id='dragbadge';document.body.appendChild(badge);
+function idxAt(c,clientX){
+  const r=c.canvas.getBoundingClientRect();
+  const v=c.scales.x.getValueForPixel(clientX-r.left);
+  return Math.max(0,Math.min(c.data.labels.length-1,Math.round(v)));
+}
+function wireZoom(id){
+  const cv=document.getElementById(id);
+  if(cv.dataset.z)return;cv.dataset.z=1;
+  cv.addEventListener('dblclick',()=>{CH[id]&&CH[id].resetZoom();});
+
+  let dragging=false,i0=null;
+  cv.addEventListener('mousedown',e=>{const c=CH[id];if(!c)return;
+    dragging=true;i0=idxAt(c,e.clientX);
+    c.$drag=true;                      // 拖选中屏蔽 tooltip
+  });
+  window.addEventListener('mousemove',e=>{
+    if(!dragging)return;const c=CH[id];if(!c){dragging=false;return;}
+    const i1=idxAt(c,e.clientX),L=c.data.labels;
+    const a=Math.min(i0,i1),b=Math.max(i0,i1),n=b-a+1;
+    badge.innerHTML=`<b>${L[a]}</b> → <b>${L[b]}</b><span>共 ${n} 天</span>`;
+    badge.style.left=(e.clientX+16)+'px';
+    badge.style.top=(e.clientY-38)+'px';
+    badge.classList.add('on');
+  });
+  window.addEventListener('mouseup',()=>{
+    if(!dragging)return;dragging=false;badge.classList.remove('on');
+    const c=CH[id];if(c)c.$drag=false;
+  });
+
+  const box=cv.closest('.chartbox');
+  if(box&&!box.nextElementSibling?.classList.contains('zhint')){
+    const t=document.createElement('div');t.className='zhint';
+    t.textContent='在图上横向拖选可放大该段日期 · 双击还原';
+    box.after(t);
+  }
+}
+function dual(id,labels,a,b){
+  kill(id);const R=pr(labels.length);
+  CH[id]=new Chart(document.getElementById(id),{type:'line',data:{labels,datasets:[
+    {...a,borderColor:PAL[0],backgroundColor:'rgba(79,70,229,.08)',fill:true,tension:.3,borderWidth:2,pointRadius:R,pointHoverRadius:5,yAxisID:'y'},
+    {...b,borderColor:PAL[3],backgroundColor:'transparent',tension:.3,borderWidth:2,pointRadius:R,pointHoverRadius:5,yAxisID:'y1'}]},
+    options:{...baseOpt,scales:{...baseOpt.scales,
+      y:{...baseOpt.scales.y,position:'left'},
+      y1:{position:'right',border:{display:false},grid:{display:false},ticks:{font:{size:10.5},color:'#8b95a3',callback:v=>v+'%'}}}}});
+  wireZoom(id);
+}
+function multi(id,labels,sets,title){
+  kill(id);const R=pr(labels.length);
+  CH[id]=new Chart(document.getElementById(id),{type:'line',
+    data:{labels,datasets:sets.map((s,i)=>({...s,borderColor:PAL[i%PAL.length],backgroundColor:'transparent',tension:.3,borderWidth:1.8,pointRadius:R,pointHoverRadius:5,spanGaps:true}))},
+    options:{...baseOpt,plugins:{...baseOpt.plugins,title:title?{display:true,text:title,font:{size:12},color:'#5b6472',padding:{bottom:10}}:{display:false}}}});
+  wireZoom(id);
+}
+/* 堆叠柱 + 柱顶占比（随图例显隐动态重算） */
+const SHARE_LABEL={id:'shareLabel',afterDatasetsDraw(c,a,o){
+  const D=o.data;if(!D)return;                       // D={nums:[[app,pc,h5]...], denoms:[appTot,pcTot,h5Tot]}
+  const vis=c.data.datasets.map((_,i)=>c.isDatasetVisible(i));
+  const den=D.denoms.reduce((s,v,i)=>s+(vis[i]?v:0),0);
+  if(!den)return;
+  const ctx=c.ctx;
+  ctx.save();ctx.font='600 11px Inter,PingFang SC,sans-serif';ctx.fillStyle='#5b6472';ctx.textAlign='center';
+  c.data.labels.forEach((_,li)=>{
+    const num=D.nums[li].reduce((s,v,i)=>s+(vis[i]?v:0),0);
+    // 取该柱可见部分的最高点
+    let top=null,x=null;
+    c.data.datasets.forEach((_,di)=>{
+      if(!vis[di])return;
+      const bar=c.getDatasetMeta(di).data[li];
+      if(!bar)return;x=bar.x;
+      if(top===null||bar.y<top)top=bar.y;
+    });
+    if(top===null)return;
+    ctx.fillText((num/den*100).toFixed(1)+'%',x,top-7);
+  });
+  ctx.restore();
+}};
+function bars(id,labels,sets,shareData){
+  kill(id);
+  CH[id]=new Chart(document.getElementById(id),{type:'bar',
+    data:{labels,datasets:sets.map((s,i)=>({...s,backgroundColor:PAL[i],borderRadius:3,barPercentage:.75}))},
+    options:{...baseOpt,layout:{padding:{top:22}},
+      plugins:{...baseOpt.plugins,zoom:{},shareLabel:{data:shareData}},
+      scales:{...baseOpt.scales,x:{...baseOpt.scales.x,stacked:true,ticks:{...baseOpt.scales.x.ticks,maxTicksLimit:20}},y:{...baseOpt.scales.y,stacked:true}}},
+    plugins:[SHARE_LABEL]});
+}
+/* 迷你趋势线 */
+function spark(v){
+  const a=v.filter(x=>isFinite(x)),mn=Math.min(...a),mx=Math.max(...a),r=(mx-mn)||1;
+  const w=78,h=24,step=v.length>1?w/(v.length-1):w;
+  const pts=v.map((x,i)=>`${(i*step).toFixed(1)},${(h-2-((x-mn)/r)*(h-5)).toFixed(1)}`).join(' ');
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}"><polyline points="${pts}" fill="none" stroke="#4f46e5" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
+
+/* ═════════ 交互 ═════════ */
+function nav(k){
+  document.getElementById('nav-report').classList.toggle('on',k==='report');
+  document.getElementById('nav-query').classList.toggle('on',k==='query');
+  syncShell();
+}
+function showMod(el){
+  document.querySelectorAll('.side a').forEach(a=>a.classList.remove('on'));el.classList.add('on');
+  document.querySelectorAll('.mod').forEach(m=>m.classList.remove('on'));
+  document.getElementById(el.dataset.m).classList.add('on');
+}
+function segOn(el){[...el.parentNode.children].forEach(b=>b.classList.remove('on'));el.classList.add('on');}
+function setGran(g,el){S.gran=g;segOn(el);trendChart();}
+function setSpan(mode,el){S.span=mode;segOn(el);
+  pvTable();pvChart();pc2Table();pc2Chart();cvChart();lcChart();ccChart();}
+function setView(k,v,el){S[k]=v;segOn(el);
+  document.getElementById(`v-${k}-table`).style.display=v==='table'?'block':'none';
+  document.getElementById(`v-${k}-chart`).style.display=v==='chart'?'block':'none';
+  if(v==='chart')setTimeout(()=>Object.values(CH).forEach(c=>c.resize()),30);
+}
+function setPlat(k,p,el){S.plat[k]=p;segOn(el);
+  if(k==='pc2'){pc2Table();pc2Chart();}
+  if(k==='lc'){lcTable();lcChips();lcChart();}
+  if(k==='cc'){ccTable();ccChart();}}
+function setRank(r,el){S.rank=r;segOn(el);LC_SEL=null;lcTable();lcChips();lcChart();}
+function setCust(c,el){S.cust.lc=c;segOn(el);lcTable();lcChart();}
+
+/* 复制 / 导出 */
+function cp(id){
+  const t=document.getElementById(id);
+  const rng=document.createRange();rng.selectNode(t);
+  const sel=getSelection();sel.removeAllRanges();sel.addRange(rng);
+  try{document.execCommand('copy');toast('已复制，可直接粘贴到 Excel');}catch(e){toast('复制失败');}
+  sel.removeAllRanges();
+}
+function xl(id,name){
+  const ws=XLSX.utils.table_to_sheet(document.getElementById(id));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,name.slice(0,28));
+  XLSX.writeFile(wb,name+'.xlsx');toast('已导出 '+name+'.xlsx');
+}
+let tt;
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),1800);}
+
+/* ═════════ 自由取数 ═════════ */
+const Q={gran:'day',cross:false};
+const ALL_Q_METRICS=[
+  {n:'出票成功票量',f:C.tk,type:'vol'},
+  ...CR_FULL.map(m=>({...m,type:'cr'})),
+  ...UV_FULL.map(m=>({...m,type:'uv'}))
+];
+let qSelectedMetrics=new Set([0,1]);
+
+function initQueryPanel(){
+  const ql=document.getElementById('qLoc');
+  ql.innerHTML='<option value="ttl" selected>全部</option>';
+  [...LOCSET].sort().forEach(l=>{const o=document.createElement('option');o.value=l;o.textContent=l;ql.add(o);});
+  const qc=document.getElementById('qChan');
+  qc.innerHTML='<option value="ttl" selected>全部</option>';
+  [...CHANSET].sort().forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;qc.add(o);});
+  rebuildQChips();
+}
+
+function togglePanel(){
+  const p=document.getElementById('structPanel');
+  const show=p.style.display==='none';
+  p.style.display=show?'block':'none';
+  event.target.textContent=show?'收起筛选 ▲':'更多筛选 ▼';
+}
+
+function rebuildQChips(){
+  ['vol','cr','uv'].forEach(cat=>{
+    const box=document.getElementById('qMetrics-'+cat);if(!box)return;
+    box.innerHTML=ALL_Q_METRICS.filter(m=>m.type===cat).map((m,_)=>{
+      const i=ALL_Q_METRICS.indexOf(m),on=qSelectedMetrics.has(i);
+      return `<button class="chip ${on?'on':''}" onclick="toggleQMetric(${i})">${m.n}</button>`;
+    }).join('');
+  });
+  const box2=document.getElementById('qAddMetrics');if(!box2)return;
+  box2.innerHTML=ALL_Q_METRICS.filter((_,i)=>!qSelectedMetrics.has(i)).map((m,_)=>{
+    const i=ALL_Q_METRICS.indexOf(m);
+    const cat=m.type==='vol'?'票量':m.type==='cr'?'CR':'UV';
+    return `<button class="chip" onclick="addQMetric(${i})">+ ${m.n} <span class="v">${cat}</span></button>`;
+  }).join('');
+}
+
+function renderAddDim(){
+  // 追加平台
+  const ap=document.getElementById('qAddPlat');if(ap){
+    const cur=getSelValues('qPlat');
+    ap.innerHTML=['app','pc','h5'].filter(p=>!cur.includes(p)).map(p=>
+      `<button class="chip" onclick="addDim('qPlat','${p}')">${p.toUpperCase()}</button>`).join('')||'<span class="sub">已全选</span>';}
+  // 追加新老客
+  const ac=document.getElementById('qAddCust');if(ac){
+    const cur=getSelValues('qCust');
+    ac.innerHTML=['新客','老客'].filter(c=>!cur.includes(c)).map(c=>
+      `<button class="chip" onclick="addDim('qCust','${c}')">${c}</button>`).join('')||'<span class="sub">已全选</span>';}
+  renderAddLoc();renderAddChan();
+}
+function renderAddLoc(){
+  const box=document.getElementById('qAddLoc');if(!box)return;
+  const cur=getSelValues('qLoc'),q=(document.getElementById('qAddLocInput').value||'').trim().toLowerCase();
+  const list=[...LOCSET].filter(l=>!cur.includes(l)&&(!q||l.toLowerCase().includes(q))).sort().slice(0,20);
+  box.innerHTML=list.map(l=>`<button class="chip" onclick="addDim('qLoc','${l}')">${l}</button>`).join('');
+}
+function renderAddChan(){
+  const box=document.getElementById('qAddChan');if(!box)return;
+  const cur=getSelValues('qChan'),q=(document.getElementById('qAddChanInput').value||'').trim().toLowerCase();
+  const list=[...CHANSET].filter(c=>!cur.includes(c)&&(!q||c.toLowerCase().includes(q))).sort().slice(0,20);
+  box.innerHTML=list.map(c=>`<button class="chip" onclick="addDim('qChan','${c}')">${c}</button>`).join('');
+}
+function addDim(selId,val){
+  const el=document.getElementById(selId);
+  // 去掉 ttl 选项如果在追加具体值
+  [...el.options].forEach(o=>{if(o.value===val)o.selected=true;if(o.value==='ttl'&&val!=='ttl')o.selected=false;});
+  renderAddDim();qExec();
+}
+function toggleQMetric(i){
+  if(qSelectedMetrics.has(i))qSelectedMetrics.delete(i);else qSelectedMetrics.add(i);
+  rebuildQChips();
+}
+function addQMetric(i){qSelectedMetrics.add(i);rebuildQChips();qExec();}
+
+function getSelValues(id){return [...document.getElementById(id).selectedOptions].map(o=>o.value);}
+function parseDateInput(s){
+  if(!s)return null;s=s.trim();
+  let m=s.match(/^(\d{1,2})\.(\d{1,2})$/);
+  if(m){const yr=DAYS.length?DAYS[0].d.getFullYear():2026;return new Date(yr,+m[1]-1,+m[2]);}
+  m=s.match(/^(\d{4})\.(\d{1,2})\.(\d{1,2})$/);
+  if(m)return new Date(+m[1],+m[2]-1,+m[3]);
+  m=s.match(/^(\d{1,2})月(\d{1,2})日?$/);
+  if(m){const yr=DAYS.length?DAYS[0].d.getFullYear():2026;return new Date(yr,+m[1]-1,+m[2]);}
+  return new Date(s);
+}
+
+function qExec(){
+  if(!DATA){toast('请先导入底表');return;}
+  const plats=getSelValues('qPlat'),locs=getSelValues('qLoc'),
+        custs=getSelValues('qCust'),chans=getSelValues('qChan');
+  const start=parseDateInput(document.getElementById('qStart').value);
+  const end=parseDateInput(document.getElementById('qEnd').value);
+  const metrics=[...qSelectedMetrics].map(i=>ALL_Q_METRICS[i]).filter(Boolean);
+  if(!metrics.length){toast('请至少选择一个指标');return;}
+
+  let timePoints,getA;
+  if(Q.gran==='day'){
+    timePoints=DAYS.filter(d=>(!start||d.d>=start)&&(!end||d.d<=end));
+    getA=(tp,p,l,c,ch)=>rowsD(tp.k,p,l,c,ch);
+  }else if(Q.gran==='week'){
+    timePoints=WEEKS.filter(w=>(!start||w.e>=start)&&(!end||w.s<=end));
+    getA=(tp,p,l,c,ch)=>rows(tp,p,l,c,ch);
+  }else{
+    timePoints=MONTHS.filter(m=>{const d=new Date(Math.floor(m.k/12),m.k%12,15);return(!start||d>=start)&&(!end||d<=end);});
+    getA=(tp,p,l,c,ch)=>rowsM(tp.k,p,l,c,ch);
+  }
+  const labels=timePoints.map(tp=>tp.label||tp.rng||tp.tag);
+
+  const series=[];
+  if(Q.cross){
+    plats.forEach(p=>locs.forEach(l=>custs.forEach(c=>chans.forEach(ch=>{
+      const tag=[p!=='ttl'?p.toUpperCase():'',l!=='ttl'?l:'',c!=='ttl'?c:'',ch!=='ttl'?ch:''].filter(Boolean).join('·')||'大盘';
+      metrics.forEach(m=>{
+        const data=timePoints.map(tp=>{const a=getA(tp,p,l,c,ch);
+          if(m.type==='vol')return a[SLOT[m.f]]||0;
+          if(m.type==='uv')return a[SLOT[m.f]]||0;
+          return metric(a,m)*(m.type==='cr'?100:1);});
+        series.push({label:tag+' '+m.n,data});
+      });
+    }))));
+  }else{
+    metrics.forEach(m=>{
+      const data=timePoints.map(tp=>{
+        let sv=new Float64Array(WID);
+        plats.forEach(p=>locs.forEach(l=>custs.forEach(c=>chans.forEach(ch=>{
+          const a=getA(tp,p,l,c,ch);for(let i=0;i<WID;i++)sv[i]+=a[i];}))));
+        if(m.type==='vol')return sv[SLOT[m.f]]||0;
+        if(m.type==='uv')return sv[SLOT[m.f]]||0;
+        return metric(sv,m)*(m.type==='cr'?100:1);});
+      series.push({label:m.n,data});
+    });
+  }
+
+  const desc=[plats.filter(x=>x!=='ttl').map(x=>x.toUpperCase()).join('+'),
+    locs.filter(x=>x!=='ttl').join('+'),custs.filter(x=>x!=='ttl').join('+'),
+    chans.filter(x=>x!=='ttl').join('+')].filter(Boolean).join(' · ')||'大盘';
+  document.getElementById('qResultSub').textContent=desc+' · '+Q.gran+'度 · '+metrics.map(m=>m.n).join('+');
+
+  multi('c-qr',labels,series,desc);
+  let th='<thead><tr><th>日期</th>'+series.map(s=>'<th>'+s.label+'</th>').join('')+'</tr></thead>';
+  let tb='<tbody>'+labels.map((l,i)=>'<tr><td>'+l+'</td>'+series.map(s=>{const v=s.data[i];
+    return '<td>'+(s.label.includes('CR')||s.label.includes('cr')?(v!=null?v.toFixed(2)+'%':'-'):fmtInt(v))+'</td>';}).join('')+'</tr>').join('')+'</tbody>';
+  document.getElementById('t-qr').innerHTML=th+tb;
+  document.getElementById('qResult').style.display='block';
+  renderAddDim();
+}
+
+function setQView(v,el){segOn(el);
+  document.getElementById('v-qr-chart').style.display=v==='chart'?'block':'none';
+  document.getElementById('v-qr-table').style.display=v==='table'?'block':'none';}
+
+function qQuick(opts){
+  if(!DATA){toast('请先导入底表');return;}
+  document.getElementById('qPlat').value=opts.plat||'ttl';
+  document.getElementById('qLoc').value=opts.loc||'ttl';
+  document.getElementById('qCust').value=opts.cust||'ttl';
+  document.getElementById('qChan').value=opts.chan||'ttl';
+  document.getElementById('qStart').value='';document.getElementById('qEnd').value='';
+  Q.gran='day';Q.cross=false;
+  document.querySelectorAll('#seg-qgran button').forEach((b,i)=>b.classList.toggle('on',i===0));
+  document.querySelectorAll('#seg-qmode button').forEach((b,i)=>b.classList.toggle('on',i===0));
+  qSelectedMetrics=new Set([0,1]);rebuildQChips();qExec();
+}
+
+function nlQuery(){
+  if(!DATA){toast('请先导入底表');return;}
+  const raw=document.getElementById('nlInput').value.trim();
+  if(!raw){toast('请输入查询关键词');return;}
+  let plat='ttl';
+  if(/\bAPP\b/i.test(raw))plat='app';else if(/\bPC\b/i.test(raw))plat='pc';else if(/\bH5\b/i.test(raw))plat='h5';
+  document.getElementById('qPlat').value=plat;
+  let loc='ttl';
+  const norm=s=>s.toLowerCase().replace(/[_\-\s]/g,'');
+  const rawNorm=norm(raw);
+  for(const l of [...LOCSET]){if(rawNorm.includes(norm(l))){loc=l;break;}}
+  // 也匹配中文别名
+  const CN_LOC={'日本':'ja_jp','韩国':'ko_kr','香港':'zh_hk','台湾':'zh_tw','俄罗斯':'ru_ru','新加坡':'en_sg','英国':'en_gb','美国':'en_us','澳洲':'en_au','澳大利亚':'en_au'};
+  for(const [cn,code] of Object.entries(CN_LOC)){if(raw.includes(cn)){loc=code;break;}}
+  document.getElementById('qLoc').value=loc;
+  let cust='ttl';if(/新客/.test(raw))cust='新客';else if(/老客/.test(raw))cust='老客';
+  document.getElementById('qCust').value=cust;
+  let chan='ttl';
+  for(const c of ['自然&其他','投放','SEO','Organic','PPC','推送','用户运营','活动&新媒体达人码','国际公域','商务合作','功能增长','SocialNetwork','Partner','Meta','EDM','Content','Commercialization','Branding','App Marketing','APP-Push']){if(raw.includes(c)){chan=c;break;}}
+  document.getElementById('qChan').value=chan;
+  Q.gran='day';
+  if(/周度|by周|周视图/.test(raw))Q.gran='week';else if(/月度|by月|月视图/.test(raw))Q.gran='month';
+  document.querySelectorAll('#seg-qgran button').forEach(b=>b.classList.toggle('on',
+    (Q.gran==='day'&&b.textContent==='日')||(Q.gran==='week'&&b.textContent==='周')||(Q.gran==='month'&&b.textContent==='月')));
+  const dm=raw.match(/(\d{1,2})[\.月](\d{1,2})[日号]?\s*(?:到|至|-|~)\s*(\d{1,2})[\.月](\d{1,2})/);
+  if(dm){document.getElementById('qStart').value=dm[1]+'.'+dm[2];document.getElementById('qEnd').value=dm[3]+'.'+dm[4];}
+  else{document.getElementById('qStart').value='';document.getElementById('qEnd').value='';}
+  qSelectedMetrics=new Set();
+  ALL_Q_METRICS.forEach((m,i)=>{if(raw.includes(m.n))qSelectedMetrics.add(i);});
+  if(!qSelectedMetrics.size)qSelectedMetrics=new Set([0,1]);
+  rebuildQChips();Q.cross=false;
+  document.querySelectorAll('#seg-qmode button').forEach((b,i)=>b.classList.toggle('on',i===0));
+  qExec();
+  toast('已解析：'+[plat!=='ttl'?plat.toUpperCase():'',loc!=='ttl'?loc:'',cust!=='ttl'?cust:'',chan!=='ttl'?chan:''].filter(Boolean).join(' ')||'大盘');
+}
+
+function qReset(){
+  document.getElementById('nlInput').value='';
+  document.getElementById('qStart').value='';document.getElementById('qEnd').value='';
+  ['qPlat','qLoc','qCust','qChan'].forEach(id=>document.getElementById(id).value='ttl');
+  Q.gran='day';Q.cross=false;
+  document.querySelectorAll('#seg-qgran button').forEach((b,i)=>b.classList.toggle('on',i===0));
+  document.querySelectorAll('#seg-qmode button').forEach((b,i)=>b.classList.toggle('on',i===0));
+  qSelectedMetrics=new Set([0,1]);rebuildQChips();
+  document.getElementById('qResult').style.display='none';
+}
+
+syncShell();
+</script>
+</body>
+</html>
