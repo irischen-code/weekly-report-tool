@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>日铁周报数据工具</title>
+<title>Trip.com 日铁周报数据工具</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
@@ -11,7 +11,8 @@
 <style>
 :root{
   --bg:#0f1115; --panel:#ffffff; --ink:#1c2024; --ink-2:#5b6472; --ink-3:#8b95a3;
-  --line:#e8ebf0; --line-2:#f1f3f7; --accent:#4f46e5; --accent-soft:#eef2ff;
+  --line:#e8ebf0; --line-2:#f1f3f7;
+  --accent:#3151F4; --accent-soft:#EBF0FF;
   --up:#0f9d58; --down:#e5484d; --chip:#f6f7f9;
   --radius:10px;
 }
@@ -20,15 +21,15 @@ body{font-family:"Inter","PingFang SC","Microsoft YaHei",-apple-system,system-ui
 button{font-family:inherit}
 
 /* ── top bar ── */
-.topbar{background:#12141a;color:#fff;padding:0 24px;height:58px;display:flex;align-items:center;gap:28px;position:sticky;top:0;z-index:50}
+.topbar{background:#3151F4;color:#fff;padding:0 24px;height:58px;display:flex;align-items:center;gap:28px;position:sticky;top:0;z-index:50}
 .brand{font-size:14px;font-weight:600;letter-spacing:.02em;display:flex;align-items:center;gap:9px}
-.brand .dot{width:7px;height:7px;border-radius:50%;background:#6366f1;box-shadow:0 0 10px #6366f1}
-.tabs-top{display:flex;gap:2px;margin-left:8px}
-.tabs-top button{background:transparent;border:0;color:#8b93a3;padding:8px 14px;font-size:13px;border-radius:7px;cursor:pointer;transition:.15s}
-.tabs-top button:hover{color:#fff;background:#1d2028}
-.tabs-top button.on{background:#252a35;color:#fff}
+.tabs-top{display:flex;gap:0;margin-left:16px;border-bottom:none}
+.tabs-top button{background:transparent;border:0;border-bottom:2px solid transparent;color:rgba(255,255,255,0.6);padding:8px 18px;font-size:13px;border-radius:0;cursor:pointer;transition:.15s;margin-bottom:-1px;position:relative}
+.tabs-top button:hover{color:#fff}
+.tabs-top button.on{color:#fff;border-bottom:2px solid transparent;font-weight:600}
+.tabs-top button.on::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:calc(100% - 36px);height:2px;background:#fff;border-radius:1px}
 .topbar .right{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12px;color:#7b8494}
-.pill{background:#1d2028;border:1px solid #2a2f3a;padding:5px 10px;border-radius:20px;color:#c3c9d4;font-size:11.5px}
+.pill{background:transparent;border:none;padding:5px 10px;color:rgba(255,255,255,0.8);font-size:11.5px}
 
 /* ── upload ── */
 .empty{display:none;height:calc(100vh - 58px);align-items:center;justify-content:center}
@@ -39,8 +40,8 @@ button{font-family:inherit}
 .drop p{color:var(--ink-3);font-size:13px;line-height:1.7}
 .drop .ico{font-size:34px;margin-bottom:14px;opacity:.8}
 input[type=file]{display:none}
-.btn.ghost{background:#1d2028;border-color:#2a2f3a;color:#c3c9d4}
-.btn.ghost:hover{background:#252a35;border-color:#3a4150;color:#fff}
+.btn.ghost{background:#fff;border-color:#fff;color:#1c2024;font-weight:600}
+.btn.ghost:hover{background:#f0f0f0;border-color:#f0f0f0;color:#1c2024}
 /* 全局拖拽遮罩 */
 #veil{position:fixed;inset:0;background:rgba(79,70,229,.10);backdrop-filter:blur(2px);z-index:200;display:none;align-items:center;justify-content:center}
 #veil.on{display:flex}
@@ -74,7 +75,10 @@ input[type=file]{display:none}
 .btn{border:1px solid var(--line);background:#fff;color:var(--ink-2);padding:6px 11px;font-size:12px;border-radius:7px;cursor:pointer;transition:.12s}
 .btn:hover{border-color:#c9cfda;color:var(--ink);background:#fafbfc}
 .btn.p{background:var(--accent);border-color:var(--accent);color:#fff}
-.btn.p:hover{background:#4338ca;border-color:#4338ca}
+.btn.p:hover{background:#2340d3;border-color:#2340d3}
+/* 导出按钮 */
+.btn.btn-export,.btn.btn-export:hover{background:#3151F4;border-color:#3151F4;color:#fff;font-weight:600}
+.btn.btn-export:hover{background:#2340d3}
 .sel{border:1px solid var(--line);background:#fff;color:var(--ink);padding:6px 10px;font-size:12px;border-radius:7px;cursor:pointer;min-width:180px;font-family:inherit}
 .sel:focus{outline:none;border-color:var(--accent)}
 .ctrl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
@@ -141,7 +145,7 @@ td.dim{color:var(--ink-3)}
 @media(min-width:2000px){.chartbox{height:440px}}
 .sect-title{font-size:12.5px;font-weight:600;color:var(--ink-2);margin-bottom:4px;letter-spacing:.01em}
 .zhint{font-size:11px;color:var(--ink-3);text-align:center;margin-top:8px}
-#dragbadge{position:fixed;z-index:300;background:#12141a;color:#fff;padding:7px 12px;border-radius:8px;
+#dragbadge{position:fixed;z-index:300;background:#3151F4;color:#fff;padding:7px 12px;border-radius:8px;
   font-size:12px;pointer-events:none;opacity:0;transition:opacity .1s;white-space:nowrap;
   box-shadow:0 6px 20px rgba(0,0,0,.25);display:flex;align-items:center;gap:8px}
 #dragbadge.on{opacity:1}
@@ -154,7 +158,7 @@ td.dim{color:var(--ink-3)}
 @keyframes sp{to{transform:rotate(360deg)}}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 @media(max-width:1200px){.grid2{grid-template-columns:1fr}}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);background:#12141a;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:99}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);background:#3151F4;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:99}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 .legend{font-size:11.5px;color:var(--ink-3);padding:0 18px 14px}
 </style>
@@ -162,7 +166,7 @@ td.dim{color:var(--ink-3)}
 <body>
 
 <div class="topbar">
-  <div class="brand"><span class="dot"></span>日铁周报数据工具</div>
+  <div class="brand"><span style="font-weight:800;color:#fff;letter-spacing:-.01em">Trip<span style="color:#FFB400">.</span>com</span><span style="font-weight:400;color:rgba(255,255,255,0.9);font-size:13px;margin-left:8px">日铁周报数据工具</span></div>
   <div class="tabs-top">
     <button id="nav-report" class="on" onclick="nav('report')">周报数据</button>
     <button id="nav-query" onclick="nav('query')">自由取数</button>
@@ -201,7 +205,7 @@ td.dim{color:var(--ink-3)}
           <h3>1.1 总览</h3><span class="sub" id="ov-sub"></span>
           <div class="sp"></div>
           <button class="btn" onclick="cp('t-ov')">复制表格</button>
-          <button class="btn" onclick="xl('t-ov','1.1总览')">导出 xlsx</button>
+          <button class="btn btn-export" onclick="xl('t-ov','1.1总览')">导出 xlsx</button>
         </div>
         <div class="card-bd"><table id="t-ov"></table></div>
       </div>
@@ -235,7 +239,7 @@ td.dim{color:var(--ink-3)}
             <button onclick="setSpan('all',this)">全部周期</button>
           </div>
           <button class="btn" onclick="cp('t-pv')">复制</button>
-          <button class="btn" onclick="xl('t-pv','拆端票量')">导出</button>
+          <button class="btn btn-export" onclick="xl('t-pv','拆端票量')">导出</button>
         </div>
         <div class="card-bd">
           <div id="v-pv-table" style="display:none"><table id="t-pv"></table></div>
@@ -257,7 +261,7 @@ td.dim{color:var(--ink-3)}
             <button class="on" onclick="setView('pc2','chart',this)">可视化</button>
           </div>
           <button class="btn" onclick="cp('t-pc2')">复制</button>
-          <button class="btn" onclick="xl('t-pc2','拆端转化')">导出</button>
+          <button class="btn btn-export" onclick="xl('t-pc2','拆端转化')">导出</button>
         </div>
         <div class="card-bd">
           <div id="v-pc2-table" style="display:none"><table id="t-pc2"></table></div>
@@ -280,7 +284,7 @@ td.dim{color:var(--ink-3)}
             <button class="on" onclick="setView('lv','chart',this)">可视化</button>
           </div>
           <button class="btn" onclick="cp('t-lv')">复制</button>
-          <button class="btn" onclick="xl('t-lv','拆locale票量')">导出</button>
+          <button class="btn btn-export" onclick="xl('t-lv','拆locale票量')">导出</button>
         </div>
         <div class="card-bd">
           <div id="v-lv-table" style="display:none"><table id="t-lv"></table></div>
@@ -314,7 +318,7 @@ td.dim{color:var(--ink-3)}
             <button class="on" onclick="setView('lc','chart',this)">可视化</button>
           </div>
           <button class="btn" onclick="cp('t-lc')">复制</button>
-          <button class="btn" onclick="xl('t-lc','拆locale流量及转化')">导出</button>
+          <button class="btn btn-export" onclick="xl('t-lc','拆locale流量及转化')">导出</button>
         </div>
         <div class="card-bd">
           <div id="v-lc-table" style="display:none"><table id="t-lc"></table></div>
@@ -345,7 +349,7 @@ td.dim{color:var(--ink-3)}
             <button class="on" onclick="setView('cv','chart',this)">可视化</button>
           </div>
           <button class="btn" onclick="cp('t-cv')">复制</button>
-          <button class="btn" onclick="xl('t-cv','拆新老票量')">导出</button>
+          <button class="btn btn-export" onclick="xl('t-cv','拆新老票量')">导出</button>
         </div>
         <div class="card-bd">
           <div id="v-cv-table" style="display:none"><table id="t-cv"></table></div>
@@ -367,7 +371,7 @@ td.dim{color:var(--ink-3)}
             <button class="on" onclick="setView('cc','chart',this)">可视化</button>
           </div>
           <button class="btn" onclick="cp('t-cc')">复制</button>
-          <button class="btn" onclick="xl('t-cc','拆新老流量及转化')">导出</button>
+          <button class="btn btn-export" onclick="xl('t-cc','拆新老流量及转化')">导出</button>
         </div>
         <div class="card-bd">
           <div id="v-cc-table" style="display:none"><table id="t-cc"></table></div>
@@ -385,10 +389,10 @@ td.dim{color:var(--ink-3)}
 
 <!-- 自由取数 -->
 <div id="query" class="shell">
-  <div style="display:flex;gap:20px;padding:24px;width:100%;overflow-y:auto;box-sizing:border-box">
+  <div style="display:flex;gap:20px;padding:24px;width:100%;box-sizing:border-box;height:calc(100vh - 58px);overflow:hidden">
 
     <!-- 左侧：查询面板（响应式宽度） -->
-    <div style="width:clamp(360px,30%,480px);flex-shrink:0;display:flex;flex-direction:column;gap:0">
+    <div style="width:clamp(360px,30%,480px);flex-shrink:0;display:flex;flex-direction:column;gap:0;overflow-y:auto;max-height:calc(100vh - 58px)">
 
     <!-- 合并查询面板 -->
     <div class="card">
@@ -551,7 +555,7 @@ td.dim{color:var(--ink-3)}
     </div><!-- 左栏结束 -->
 
     <!-- 右侧：查询结果（弹性宽度，充满剩余空间） -->
-    <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow-y:auto;max-height:calc(100vh - 58px)">
     <!-- 空态占位 -->
     <div id="qEmpty" class="card" style="flex:1;display:flex;align-items:center;justify-content:center;min-height:300px">
       <div style="text-align:center;color:var(--ink-3)">
@@ -582,7 +586,7 @@ td.dim{color:var(--ink-3)}
             <button onclick="setQView('table',this)">数据表格</button>
           </div>
           <button class="btn" onclick="cp('t-qr')">复制</button>
-          <button class="btn" onclick="xl('t-qr','查询结果')">导出</button>
+          <button class="btn btn-export" onclick="xl('t-qr','查询结果')">导出</button>
         </div>
         <div class="card-bd">
           <div id="v-qr-chart"><div class="chartbox"><canvas id="c-qr"></canvas></div></div>
@@ -757,6 +761,9 @@ function seriesD(m,plat='ttl',loc='ttl',cust='ttl',pct=false){
   });
 }
 
+/* tick：让浏览器喘口气，切 tab 不会中断解析 */
+const tick=()=>new Promise(r=>setTimeout(r,0));
+
 /* ═════════ 加载 ═════════ */
 const veil=document.createElement('div');
 veil.id='veil';veil.innerHTML='<div>松手即可导入底表</div>';
@@ -775,26 +782,39 @@ function read(file){
   const fr=new FileReader();
   fr.onerror=()=>{setBusy(null);alert('文件读取失败');};
   fr.onload=e=>{
-    setTimeout(()=>{                       // 让加载态先渲染出来
+    // 用 async 分批处理，切换 tab 不会中断
+    (async()=>{
     try{
+      setBusy(`正在读取 ${file.name}…`);
+      await tick();
+
       const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',dense:true,cellDates:false,cellStyles:false,cellNF:false,cellHTML:false});
       const ws=wb.Sheets[wb.SheetNames[0]];
+      setBusy(`正在解析工作表…`);
+      await tick();
+
       let aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null,blankrows:false});
-      wb.Sheets[wb.SheetNames[0]]=null;    // 尽早释放
+      wb.Sheets[wb.SheetNames[0]]=null;
       if(!aoa.length)throw new Error('工作表为空');
 
       const head=aoa[0].map(x=>String(x==null?'':x).trim());
       const at=n=>{const i=head.indexOf(n);if(i<0)throw new Error('缺少列：'+n);return i;};
       const iDate=at(C.date),iPlat=at(C.plat),iReg=at(C.region),iSys=at(C.sys),
             iLoc=at(C.loc),iChan=at(C.chan),iCust=at(C.cust);
-      const cols=Object.keys(SLOT).map(f=>[at(f),SLOT[f]]);   // [列下标, 槽位]
+      const cols=Object.keys(SLOT).map(f=>[at(f),SLOT[f]]);
 
       const AD2=new Map(),locs=new Set(),chans=new Set(),dayset=new Map();
       let kept=0;
+      const CHUNK=5000;
       for(let r=1;r<aoa.length;r++){
+        // 每 CHUNK 行 yield 一次，保持页面响应
+        if(r%CHUNK===0){
+          setBusy(`正在建立索引… ${Math.round(r/aoa.length*100)}%`);
+          await tick();
+        }
         const row=aoa[r];
         if(!row||row[iDate]==null)continue;
-        if(row[iReg]!=='ttl'||row[iSys]!=='ttl')continue;  // 地区/系统恒 ttl
+        if(row[iReg]!=='ttl'||row[iSys]!=='ttl')continue;
         const d=parseD(row[iDate]);
         if(isNaN(d))continue;
         const dk=+new Date(d.getFullYear(),d.getMonth(),d.getDate());
@@ -810,13 +830,16 @@ function read(file){
         a[NSLOT]+=1;
         kept++;
       }
-      aoa=null;                            // 释放 AOA
+      aoa=null;
       if(!kept)throw new Error('没有可用数据行（地区/系统/营销渠道 需为 ttl）');
+
+      setBusy(`正在生成报表…`);
+      await tick();
 
       AD=AD2;LOCSET=locs;CHANSET=chans;
       DAYS=[...dayset.entries()].sort((a,b)=>a[0]-b[0]).map(([k,d])=>({k,d,label:md(d)}));
-      buildWeeks();                        // 由 DAYS 推周期
-      rollUp();                            // 日 → 周 / 月
+      buildWeeks();
+      rollUp();
 
       Object.values(CH).forEach(c=>c.destroy());Object.keys(CH).forEach(k=>delete CH[k]);
       DATA=1;
@@ -836,7 +859,7 @@ function read(file){
         (/memory|Array buffer allocation|Invalid string length/i.test(err.message)
           ? '\n\n文件过大导致浏览器内存不足。建议：\n· 用 Chrome/Edge 打开（内存上限更高）\n· 或先把底表另存为 .csv 再导入（体积和内存占用小很多）'
           : ''));
-    }},30);
+    }})();
   };
   fr.readAsArrayBuffer(file);
 }
