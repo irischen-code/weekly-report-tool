@@ -105,6 +105,17 @@ select[multiple] option{padding:4px 8px}
   border-radius:20px;cursor:pointer;transition:.12s}
 .qchip:hover{border-color:var(--accent);color:var(--accent)}
 .qchip.on{background:var(--accent-soft);border-color:#c7d2fe;color:var(--accent);font-weight:600}
+/* 快捷查询每维度一行 */
+.qrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:7px}
+.qdim{font-size:11.5px;font-weight:600;color:var(--ink-3);min-width:52px;flex-shrink:0}
+/* 指标区不滚动 */
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding:2px}
+/* 维度筛选里的计数文字 */
+.dim-count{font-size:11.5px;color:var(--ink-3);font-weight:400}
+/* 查询结果维度筛选标签 */
+.dim-label{font-size:11.5px;font-weight:600;color:var(--ink-2)}
+/* 指标三列标题 */
+.metric-cat{font-size:11.5px;font-weight:600;color:var(--ink-3);margin-bottom:6px;display:block}
 
 /* ── table ── */
 table{border-collapse:separate;border-spacing:0;font-size:12.5px;width:100%;font-variant-numeric:tabular-nums}
@@ -126,6 +137,9 @@ td.dim{color:var(--ink-3)}
 .spark{width:78px;height:24px;display:block}
 
 .chartbox{height:320px;position:relative}
+@media(min-width:1600px){.chartbox{height:380px}}
+@media(min-width:2000px){.chartbox{height:440px}}
+.sect-title{font-size:12.5px;font-weight:600;color:var(--ink-2);margin-bottom:4px;letter-spacing:.01em}
 .zhint{font-size:11px;color:var(--ink-3);text-align:center;margin-top:8px}
 #dragbadge{position:fixed;z-index:300;background:#12141a;color:#fff;padding:7px 12px;border-radius:8px;
   font-size:12px;pointer-events:none;opacity:0;transition:opacity .1s;white-space:nowrap;
@@ -371,7 +385,10 @@ td.dim{color:var(--ink-3)}
 
 <!-- 自由取数 -->
 <div id="query" class="shell">
-  <div class="main" style="padding:28px;max-width:1600px">
+  <div style="display:flex;gap:20px;padding:24px;width:100%;overflow-y:auto;box-sizing:border-box">
+
+    <!-- 左侧：查询面板（响应式宽度） -->
+    <div style="width:clamp(360px,30%,480px);flex-shrink:0;display:flex;flex-direction:column;gap:0">
 
     <!-- 合并查询面板 -->
     <div class="card">
@@ -379,14 +396,14 @@ td.dim{color:var(--ink-3)}
         <h3>自由取数</h3>
         <div class="sp"></div>
         <button class="btn" id="advBtn" onclick="toggleAdvanced()">高级筛选 ▼</button>
-        <button class="btn p" onclick="qExec()">查询</button>
         <button class="btn" onclick="qReset()">重置</button>
       </div>
       <div class="card-bd">
 
         <!-- 自然语言输入（常驻，最高优先级） -->
         <div style="margin-bottom:14px">
-          <div class="ctrl" style="gap:6px">
+          <div class="sect-title">💬 自然语言取数</div>
+          <div class="ctrl" style="gap:6px;margin-top:6px">
             <input id="nlInput" class="sel" style="flex:1;min-width:0;font-size:13px;padding:8px 12px"
               placeholder="如：APP ja_jp 新客 出票票量 6.1到6.30 周度"
               onkeydown="if(event.key==='Enter')nlQuery()">
@@ -395,47 +412,60 @@ td.dim{color:var(--ink-3)}
         </div>
 
         <!-- 快捷按钮区 -->
-        <div class="ctrl" style="gap:6px;flex-wrap:wrap">
-          <span class="sub">分端</span>
-          <button class="qchip" onclick="qQuick({plat:'app'})">APP</button>
-          <button class="qchip" onclick="qQuick({plat:'pc'})">PC</button>
-          <button class="qchip" onclick="qQuick({plat:'h5'})">H5</button>
-          <span class="sub" style="margin-left:8px">新老客</span>
-          <button class="qchip" onclick="qQuick({cust:'新客'})">新客</button>
-          <button class="qchip" onclick="qQuick({cust:'老客'})">老客</button>
-          <span class="sub" style="margin-left:8px">locale</span>
-          <button class="qchip" onclick="qQuick({loc:'ja_jp'})">ja_jp</button>
-          <button class="qchip" onclick="qQuick({loc:'ru_ru'})">ru_ru</button>
-          <button class="qchip" onclick="qQuick({loc:'en_xx'})">en_xx</button>
-          <button class="qchip" onclick="qQuick({loc:'zh_hk'})">zh_hk</button>
-          <button class="qchip" onclick="qQuick({loc:'ko_kr'})">ko_kr</button>
-          <button class="qchip" onclick="qQuick({loc:'en_gb'})">en_gb</button>
-          <button class="qchip" onclick="qQuick({loc:'en_us'})">en_us</button>
-          <button class="qchip" onclick="qQuick({loc:'en_au'})">en_au</button>
-          <button class="qchip" onclick="qQuick({loc:'zh_tw'})">zh_tw</button>
-          <button class="qchip" onclick="qQuick({loc:'en_sg'})">en_sg</button>
-          <span class="sub" style="margin-left:8px">营销渠道</span>
-          <button class="qchip" onclick="qQuick({chan:'自然&其他'})">自然&其他</button>
-          <button class="qchip" onclick="qQuick({chan:'投放'})">投放</button>
-          <button class="qchip" onclick="qQuick({chan:'SEO'})">SEO</button>
-          <button class="qchip" onclick="qQuick({chan:'Organic'})">Organic</button>
-          <button class="qchip" onclick="qQuick({chan:'PPC'})">PPC</button>
-          <button class="qchip" onclick="qQuick({chan:'推送'})">推送</button>
+        <div id="quickPanel">
+          <div class="sect-title" style="margin-bottom:10px">⚡ 快速查询 <span style="font-weight:400;color:var(--ink-3);font-size:11px;margin-left:4px">点击直接出图</span></div>
+          <div class="qrow"><span class="qdim">分端</span>
+            <button class="qchip on" data-dim="plat" data-val="ttl" onclick="qQuickTtl('plat',this)">大盘</button>
+            <button class="qchip" data-dim="plat" data-val="app" onclick="qQuick({plat:'app'})">APP</button>
+            <button class="qchip" data-dim="plat" data-val="pc" onclick="qQuick({plat:'pc'})">PC</button>
+            <button class="qchip" data-dim="plat" data-val="h5" onclick="qQuick({plat:'h5'})">H5</button>
+          </div>
+          <div class="qrow"><span class="qdim">新老客</span>
+            <button class="qchip on" data-dim="cust" data-val="ttl" onclick="qQuickTtl('cust',this)">大盘</button>
+            <button class="qchip" data-dim="cust" data-val="新客" onclick="qQuick({cust:'新客'})">新客</button>
+            <button class="qchip" data-dim="cust" data-val="老客" onclick="qQuick({cust:'老客'})">老客</button>
+          </div>
+          <div class="qrow"><span class="qdim">locale</span>
+            <button class="qchip on" data-dim="loc" data-val="ttl" onclick="qQuickTtl('loc',this)">大盘</button>
+            <button class="qchip" data-dim="loc" data-val="ja_jp" onclick="qQuick({loc:'ja_jp'})">ja_jp</button>
+            <button class="qchip" data-dim="loc" data-val="ru_ru" onclick="qQuick({loc:'ru_ru'})">ru_ru</button>
+            <button class="qchip" data-dim="loc" data-val="en_xx" onclick="qQuick({loc:'en_xx'})">en_xx</button>
+            <button class="qchip" data-dim="loc" data-val="zh_hk" onclick="qQuick({loc:'zh_hk'})">zh_hk</button>
+            <button class="qchip" data-dim="loc" data-val="ko_kr" onclick="qQuick({loc:'ko_kr'})">ko_kr</button>
+            <button class="qchip" data-dim="loc" data-val="en_gb" onclick="qQuick({loc:'en_gb'})">en_gb</button>
+            <button class="qchip" data-dim="loc" data-val="en_us" onclick="qQuick({loc:'en_us'})">en_us</button>
+            <button class="qchip" data-dim="loc" data-val="en_au" onclick="qQuick({loc:'en_au'})">en_au</button>
+            <button class="qchip" data-dim="loc" data-val="zh_tw" onclick="qQuick({loc:'zh_tw'})">zh_tw</button>
+            <button class="qchip" data-dim="loc" data-val="en_sg" onclick="qQuick({loc:'en_sg'})">en_sg</button>
+          </div>
+          <div class="qrow"><span class="qdim">营销渠道</span>
+            <button class="qchip on" data-dim="chan" data-val="ttl" onclick="qQuickTtl('chan',this)">大盘</button>
+            <button class="qchip" data-dim="chan" data-val="自然&其他" onclick="qQuick({chan:'自然&其他'})">自然&其他</button>
+            <button class="qchip" data-dim="chan" data-val="投放" onclick="qQuick({chan:'投放'})">投放</button>
+            <button class="qchip" data-dim="chan" data-val="SEO" onclick="qQuick({chan:'SEO'})">SEO</button>
+            <button class="qchip" data-dim="chan" data-val="Organic" onclick="qQuick({chan:'Organic'})">Organic</button>
+            <button class="qchip" data-dim="chan" data-val="PPC" onclick="qQuick({chan:'PPC'})">PPC</button>
+            <button class="qchip" data-dim="chan" data-val="推送" onclick="qQuick({chan:'推送'})">推送</button>
+          </div>
         </div>
 
         <!-- 高级筛选区（默认折叠） -->
-        <div id="advPanel" style="display:none;margin-top:16px;border-top:1px solid var(--line-2);padding-top:16px">
+        <div id="advPanel" style="display:none;margin-top:14px;border-top:1px solid var(--line-2);padding-top:16px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+            <span style="font-size:12px;font-weight:600;color:var(--ink-2);letter-spacing:.04em">高级筛选</span>
+            <div style="flex:1;height:1px;background:var(--line-2)"></div>
+          </div>
 
           <!-- 时间 + 粒度 -->
           <div class="ctrl" style="gap:14px;flex-wrap:wrap;margin-bottom:14px">
             <div><label class="qlbl">时间粒度</label>
               <div class="seg" id="seg-qgran" style="margin-top:4px">
-                <button class="on" onclick="segOn(this);Q.gran='day'">日</button>
-                <button onclick="segOn(this);Q.gran='week'">周</button>
-                <button onclick="segOn(this);Q.gran='month'">月</button>
+                <button class="on" onclick="segOn(this);Q.gran='day';if(DATA)qExec()">日</button>
+                <button onclick="segOn(this);Q.gran='week';if(DATA)qExec()">周</button>
+                <button onclick="segOn(this);Q.gran='month';if(DATA)qExec()">月</button>
               </div></div>
-            <div><label class="qlbl">开始日期</label><input type="date" class="sel" id="qStart" style="min-width:140px;margin-top:4px"></div>
-            <div><label class="qlbl">结束日期</label><input type="date" class="sel" id="qEnd" style="min-width:140px;margin-top:4px"></div>
+            <div><label class="qlbl">开始日期</label><input type="date" class="sel" id="qStart" style="min-width:140px;margin-top:4px" onchange="if(DATA)qExec()"></div>
+            <div><label class="qlbl">结束日期</label><input type="date" class="sel" id="qEnd" style="min-width:140px;margin-top:4px" onchange="if(DATA)qExec()"></div>
           </div>
 
           <!-- 维度多选（折叠面板） -->
@@ -445,7 +475,7 @@ td.dim{color:var(--ink-3)}
               <label class="qlbl">平台</label>
               <div style="margin-top:4px;display:flex;align-items:center;gap:6px">
                 <button class="btn" onclick="toggleDrop('dropPlat')">选择平台 ▼</button>
-                <span class="sub" id="dimPlatCount">全部</span>
+                <span class="dim-count" id="dimPlatCount">全部</span>
               </div>
               <div class="dropdown" id="dropPlat">
                 <div class="drop-list" id="dropPlatList">
@@ -461,7 +491,7 @@ td.dim{color:var(--ink-3)}
               <label class="qlbl">新老客</label>
               <div style="margin-top:4px;display:flex;align-items:center;gap:6px">
                 <button class="btn" onclick="toggleDrop('dropCust')">选择客户 ▼</button>
-                <span class="sub" id="dimCustCount">全部</span>
+                <span class="dim-count" id="dimCustCount">全部</span>
               </div>
               <div class="dropdown" id="dropCust">
                 <div class="drop-list" id="dropCustList">
@@ -476,7 +506,7 @@ td.dim{color:var(--ink-3)}
               <label class="qlbl">locale</label>
               <div style="margin-top:4px;display:flex;align-items:center;gap:6px">
                 <button class="btn" onclick="toggleDrop('dropLocAdv')">选择 locale ▼</button>
-                <span class="sub" id="dimLocAdvCount">全部</span>
+                <span class="dim-count" id="dimLocAdvCount">全部</span>
               </div>
               <div class="dropdown" id="dropLocAdv" style="min-width:260px">
                 <input class="sel" style="width:100%;min-width:0;margin-bottom:6px" placeholder="搜索…" oninput="renderDropLocAdv()">
@@ -488,7 +518,7 @@ td.dim{color:var(--ink-3)}
               <label class="qlbl">营销渠道</label>
               <div style="margin-top:4px;display:flex;align-items:center;gap:6px">
                 <button class="btn" onclick="toggleDrop('dropChanAdv')">选择渠道 ▼</button>
-                <span class="sub" id="dimChanAdvCount">全部</span>
+                <span class="dim-count" id="dimChanAdvCount">全部</span>
               </div>
               <div class="dropdown" id="dropChanAdv" style="min-width:220px">
                 <input class="sel" style="width:100%;min-width:0;margin-bottom:6px" placeholder="搜索…" oninput="renderDropChanAdv()">
@@ -507,10 +537,10 @@ td.dim{color:var(--ink-3)}
 
           <!-- 指标选择 -->
           <div><label class="qlbl">指标（可多选）</label>
-            <div class="mcols" style="margin-top:6px">
-              <div><span class="sub">票量</span><div class="chips" id="qMetrics-vol" style="margin-top:4px"></div></div>
-              <div><span class="sub">CR</span><div class="chips" id="qMetrics-cr" style="margin-top:4px"></div></div>
-              <div><span class="sub">UV</span><div class="chips" id="qMetrics-uv" style="margin-top:4px"></div></div>
+            <div style="margin-top:8px">
+              <div style="margin-bottom:10px"><span class="metric-cat">票量</span><div class="chips" id="qMetrics-vol" style="margin-top:4px"></div></div>
+              <div style="margin-bottom:10px"><span class="metric-cat">CR</span><div class="chips" id="qMetrics-cr" style="margin-top:4px"></div></div>
+              <div><span class="metric-cat">UV</span><div class="chips" id="qMetrics-uv" style="margin-top:4px"></div></div>
             </div>
           </div>
 
@@ -518,8 +548,20 @@ td.dim{color:var(--ink-3)}
       </div>
     </div>
 
+    </div><!-- 左栏结束 -->
+
+    <!-- 右侧：查询结果（弹性宽度，充满剩余空间） -->
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <!-- 空态占位 -->
+    <div id="qEmpty" class="card" style="flex:1;display:flex;align-items:center;justify-content:center;min-height:300px">
+      <div style="text-align:center;color:var(--ink-3)">
+        <div style="font-size:36px;margin-bottom:12px;opacity:.4">📊</div>
+        <div style="font-size:13px">从左侧选择查询条件</div>
+        <div style="font-size:12px;margin-top:6px">快捷按钮点击即出图 · 高级筛选调整后自动刷新</div>
+      </div>
+    </div>
     <!-- 结果区 -->
-    <div id="qResult" style="display:none">
+    <div id="qResult" style="display:none;flex:1">
       <div class="card">
         <div class="card-hd">
           <h3>查询结果</h3><span class="sub" id="qResultSub"></span>
@@ -549,25 +591,25 @@ td.dim{color:var(--ink-3)}
 
         <!-- 维度筛选 -->
         <div class="card-bd" style="border-top:1px solid var(--line-2)">
-          <label class="qlbl">维度筛选</label>
+          <label class="qlbl">追加维度</label>
           <div class="ctrl" style="gap:16px;flex-wrap:wrap;align-items:flex-start;margin-top:8px">
-            <div><span class="sub">平台</span>
+            <div><span class="dim-label">平台</span>
               <div class="ctrl" style="gap:4px;margin-top:4px" id="qDimPlat"></div></div>
-            <div><span class="sub">新老客</span>
+            <div><span class="dim-label">新老客</span>
               <div class="ctrl" style="gap:4px;margin-top:4px" id="qDimCust"></div></div>
-            <div style="position:relative"><span class="sub">locale</span>
+            <div style="position:relative"><span class="dim-label">locale</span>
               <div style="margin-top:4px">
                 <button class="btn" onclick="toggleDrop('dropLoc')">选择 locale ▼</button>
-                <span class="sub" id="dimLocCount"></span>
+                <span class="dim-count" id="dimLocCount"></span>
               </div>
               <div class="dropdown" id="dropLoc">
                 <input class="sel" style="width:100%;min-width:0;margin-bottom:6px" placeholder="搜索…" oninput="renderDropLoc()">
                 <div class="drop-list" id="dropLocList"></div>
               </div></div>
-            <div style="position:relative"><span class="sub">营销渠道</span>
+            <div style="position:relative"><span class="dim-label">营销渠道</span>
               <div style="margin-top:4px">
                 <button class="btn" onclick="toggleDrop('dropChan')">选择渠道 ▼</button>
-                <span class="sub" id="dimChanCount"></span>
+                <span class="dim-count" id="dimChanCount"></span>
               </div>
               <div class="dropdown" id="dropChan">
                 <input class="sel" style="width:100%;min-width:0;margin-bottom:6px" placeholder="搜索…" oninput="renderDropChan()">
@@ -588,7 +630,9 @@ td.dim{color:var(--ink-3)}
       </div>
     </div>
 
-  </div>
+    </div><!-- 右栏结束 -->
+
+  </div><!-- 外层 flex 结束 -->
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1368,8 +1412,10 @@ function filterLocSelect(){
 }
 function toggleAdvanced(){
   const p=document.getElementById('advPanel');
+  const q=document.getElementById('quickPanel');
   const show=p.style.display==='none';
   p.style.display=show?'block':'none';
+  if(q)q.style.display=show?'none':'block';
   document.getElementById('advBtn').textContent=show?'收起筛选 ▲':'高级筛选 ▼';
 }
 
@@ -1391,21 +1437,60 @@ function qRefresh(){
 }
 
 /* 快捷按钮点击高亮 */
+/* 快捷查询状态：每个维度组独立维护已选集合 */
+const QQ={plat:new Set(['ttl']),cust:new Set(['ttl']),loc:new Set(['ttl']),chan:new Set(['ttl'])};
+const QQ_KEY={plat:'qPlat',cust:'qCust',loc:'qLoc',chan:'qChan'};
+
 function qQuick(opts){
   if(!DATA){toast('请先导入底表');return;}
-  // 高亮对应按钮
-  document.querySelectorAll('.qchip').forEach(b=>b.classList.remove('on'));
-  if(event&&event.target)event.target.classList.add('on');
-  setSelectVal('qPlat',opts.plat||'ttl');
-  setSelectVal('qLoc',opts.loc||'ttl');
-  setSelectVal('qCust',opts.cust||'ttl');
-  setSelectVal('qChan',opts.chan||'ttl');
-  document.getElementById('qStart').value='';document.getElementById('qEnd').value='';
-  Q.gran='day';Q.cross=false;
-  document.querySelectorAll('#seg-qgran button').forEach((b,i)=>b.classList.toggle('on',i===0));
-  document.querySelectorAll('#seg-rGran button').forEach((b,i)=>b.classList.toggle('on',i===0));
-  document.querySelectorAll('#seg-rMode button').forEach((b,i)=>b.classList.toggle('on',i===0));
+  const [dim,val]=Object.entries(opts)[0];
+  const set=QQ[dim];
+  if(set.has(val)&&!set.has('ttl')){
+    // 已选具体值 → 取消；但不能全部取消
+    if(set.size===1){
+      // 只剩这一个了，回到大盘
+      set.clear();set.add('ttl');
+    }else{
+      set.delete(val);
+    }
+  }else{
+    // 未选 → 添加，同时去掉 ttl
+    set.delete('ttl');
+    set.add(val);
+  }
+  syncQQToSelect(dim);
+  refreshQChips();
   qSelectedMetrics=new Set([0,1]);rebuildQChips();qExec();
+}
+
+/* 点「大盘」= 该维度回到 ttl，取消所有具体值 */
+function qQuickTtl(dim, btn){
+  if(!DATA){toast('请先导入底表');return;}
+  QQ[dim]=new Set(['ttl']);
+  syncQQToSelect(dim);
+  refreshQChips();
+  qSelectedMetrics=new Set([0,1]);rebuildQChips();qExec();
+}
+
+function syncQQToSelect(dim){
+  const selId=QQ_KEY[dim];
+  const el=document.getElementById(selId);if(!el)return;
+  const vals=[...QQ[dim]];
+  [...el.options].forEach(o=>o.selected=vals.includes(o.value));
+}
+
+function refreshQChips(){
+  document.querySelectorAll('.qchip[data-dim]').forEach(btn=>{
+    const dim=btn.dataset.dim, val=btn.dataset.val;
+    if(!QQ[dim])return;
+    const set=QQ[dim];
+    if(val==='ttl'){
+      // 大盘按钮：只有 set 里只有 ttl 时高亮
+      btn.classList.toggle('on', set.has('ttl'));
+    }else{
+      btn.classList.toggle('on', set.has(val)&&!set.has('ttl'));
+    }
+  });
 }
 
 function rebuildQChips(){
@@ -1417,12 +1502,12 @@ function rebuildQChips(){
       return `<button class="chip ${on?'on':''}" onclick="toggleQMetric(${i})">${m.n}</button>`;
     }).join('');
   });
-  // 追加指标面板（三列，只显示未选中的）
+  // 追加指标区域：始终显示所有指标，选中高亮，再点取消
   ['vol','cr','uv'].forEach(cat=>{
     const box=document.getElementById('qAddMetrics-'+cat);if(!box)return;
-    box.innerHTML=ALL_Q_METRICS.filter(m=>m.type===cat&&!qSelectedMetrics.has(ALL_Q_METRICS.indexOf(m))).map(m=>{
-      const i=ALL_Q_METRICS.indexOf(m);
-      return `<button class="chip" onclick="addQMetric(${i})">+ ${m.n}</button>`;
+    box.innerHTML=ALL_Q_METRICS.filter(m=>m.type===cat).map(m=>{
+      const i=ALL_Q_METRICS.indexOf(m),on=qSelectedMetrics.has(i);
+      return `<button class="chip ${on?'on':''}" onclick="toggleQMetricAdd(${i})">${m.n}</button>`;
     }).join('');
   });
 }
@@ -1571,6 +1656,13 @@ function toggleDropVal(selId,val){
 function toggleQMetric(i){
   if(qSelectedMetrics.has(i))qSelectedMetrics.delete(i);else qSelectedMetrics.add(i);
   rebuildQChips();
+  if(DATA&&document.getElementById('qResult').style.display!=='none')qExec();
+}
+function toggleQMetricAdd(i){
+  // 和结构化面板一样的 toggle，选中/取消，同步刷新图表
+  if(qSelectedMetrics.has(i))qSelectedMetrics.delete(i);else qSelectedMetrics.add(i);
+  rebuildQChips();
+  if(document.getElementById('qResult').style.display!=='none')qExec();
 }
 function addQMetric(i){qSelectedMetrics.add(i);rebuildQChips();qExec();}
 
@@ -1689,6 +1781,7 @@ function qExec(){
     return '<td>'+(s.label.includes('CR')||s.label.includes('cr')?(v!=null?v.toFixed(2)+'%':'-'):fmtInt(v))+'</td>';}).join('')+'</tr>').join('')+'</tbody>';
   document.getElementById('t-qr').innerHTML=th+tb;
   document.getElementById('qResult').style.display='block';
+  const qe=document.getElementById('qEmpty');if(qe)qe.style.display='none';
   renderAddDim();
 }
 
@@ -1748,7 +1841,12 @@ function qReset(){
   document.getElementById('nlInput').value='';
   document.getElementById('qStart').value='';document.getElementById('qEnd').value='';
   ['qPlat','qLoc','qCust','qChan'].forEach(id=>setSelectVal(id,'ttl'));
-  const ls=document.getElementById('qLocSearch');if(ls){ls.value='';filterLocSelect();}
+  // 重置快捷查询多选状态
+  Object.keys(QQ).forEach(k=>{QQ[k]=new Set(['ttl']);syncQQToSelect(k);});
+  refreshQChips();
+  const qp=document.getElementById('quickPanel');if(qp)qp.style.display='block';
+  const ap=document.getElementById('advPanel');if(ap)ap.style.display='none';
+  const ab=document.getElementById('advBtn');if(ab)ab.textContent='高级筛选 ▼';
   Q.gran='day';Q.cross=false;
   document.querySelectorAll('#seg-qgran button').forEach((b,i)=>b.classList.toggle('on',i===0));
   document.querySelectorAll('#seg-rGran button').forEach((b,i)=>b.classList.toggle('on',i===0));
@@ -1756,6 +1854,7 @@ function qReset(){
   document.querySelectorAll('.qchip').forEach(b=>b.classList.remove('on'));
   qSelectedMetrics=new Set([0,1]);rebuildQChips();
   document.getElementById('qResult').style.display='none';
+  const qe=document.getElementById('qEmpty');if(qe)qe.style.display='flex';
 }
 
 // 错误捕获 — 白屏时在顶部显示报错
