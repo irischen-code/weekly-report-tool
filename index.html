@@ -195,7 +195,7 @@ td.dim{color:var(--ink-3)}
 .dp-trigger::after{content:'▾';color:var(--ink-3);font-size:11px;flex-shrink:0}
 .dp-trigger:hover{border-color:#c9cfda}
 .dp-trigger .dp-val{color:var(--ink)}
-.dp-trigger.empty .dp-val{color:var(--ink-3)}
+.dp-trigger.dp-empty .dp-val{color:var(--ink-3)}
 .dp-pop{display:none;position:absolute;top:100%;left:0;z-index:60;margin-top:6px;background:#fff;
   border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 34px rgba(0,0,0,.14);padding:14px;width:280px}
 .dp-pop.on{display:block;animation:keyPop .16s ease}
@@ -580,12 +580,12 @@ td.dim{color:var(--ink-3)}
               </div></div>
             <div style="position:relative"><label class="qlbl">开始日期</label>
               <input type="hidden" id="qStart">
-              <button type="button" class="sel dp-trigger empty" id="qStartBtn" style="min-width:140px;margin-top:4px" onclick="openDP('qStart')"><span class="dp-val">选择日期</span></button>
+              <button type="button" class="sel dp-trigger dp-empty" id="qStartBtn" style="min-width:140px;margin-top:4px" onclick="openDP('qStart')"><span class="dp-val">选择日期</span></button>
               <div class="dp-pop" id="dp-qStart"></div>
             </div>
             <div style="position:relative"><label class="qlbl">结束日期</label>
               <input type="hidden" id="qEnd">
-              <button type="button" class="sel dp-trigger empty" id="qEndBtn" style="min-width:140px;margin-top:4px" onclick="openDP('qEnd')"><span class="dp-val">选择日期</span></button>
+              <button type="button" class="sel dp-trigger dp-empty" id="qEndBtn" style="min-width:140px;margin-top:4px" onclick="openDP('qEnd')"><span class="dp-val">选择日期</span></button>
               <div class="dp-pop" id="dp-qEnd"></div>
             </div>
           </div>
@@ -961,8 +961,8 @@ function syncDateDisplay(){
     const inp=document.getElementById(id),btn=document.getElementById(id+'Btn');
     if(!inp||!btn)return;
     const span=btn.querySelector('.dp-val'),v=inp.value;
-    if(v){span.textContent=v.replace(/-/g,'/');btn.classList.remove('empty');}
-    else{span.textContent='选择日期';btn.classList.add('empty');}
+    if(v){span.textContent=v.replace(/-/g,'/');btn.classList.remove('dp-empty');}
+    else{span.textContent='选择日期';btn.classList.add('dp-empty');}
   });
 }
 // 点击日历外部关闭
