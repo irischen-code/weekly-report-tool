@@ -591,12 +591,12 @@ td.dim{color:var(--ink-3)}
             <div style="position:relative"><label class="qlbl">开始日期</label>
               <input type="hidden" id="qStart">
               <button type="button" class="sel dp-trigger dp-empty" id="qStartBtn" style="min-width:140px;margin-top:4px" onclick="openDP('qStart')"><span class="dp-val">选择日期</span></button>
-              <div class="dp-pop" id="dp-qStart"></div>
+              <div class="dp-pop" id="dp-qStart" onclick="event.stopPropagation()"></div>
             </div>
             <div style="position:relative"><label class="qlbl">结束日期</label>
               <input type="hidden" id="qEnd">
               <button type="button" class="sel dp-trigger dp-empty" id="qEndBtn" style="min-width:140px;margin-top:4px" onclick="openDP('qEnd')"><span class="dp-val">选择日期</span></button>
-              <div class="dp-pop" id="dp-qEnd"></div>
+              <div class="dp-pop" id="dp-qEnd" onclick="event.stopPropagation()"></div>
             </div>
           </div>
 
