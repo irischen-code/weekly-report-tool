@@ -201,6 +201,16 @@ td.dim{color:var(--ink-3)}
 .dp-pop.on{display:block;animation:keyPop .16s ease}
 .dp-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .dp-hd .dp-title{font-size:14px;font-weight:600;color:var(--ink)}
+.dp-titles{display:flex;gap:4px}
+.dp-tsel{border:none;background:transparent;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer;
+  padding:4px 8px;border-radius:7px;font-family:inherit;transition:.12s}
+.dp-tsel:hover{background:var(--accent-soft);color:var(--accent)}
+.dp-mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:4px}
+.dp-mgrid button{border:none;background:transparent;border-radius:8px;height:46px;font-size:13px;cursor:pointer;
+  color:var(--ink);font-family:inherit;transition:.1s}
+.dp-mgrid button:hover{background:var(--accent-soft);color:var(--accent)}
+.dp-mgrid button.dp-sel{background:var(--accent);color:#fff;font-weight:600}
+.dp-mgrid button.dp-sel:hover{background:var(--accent);color:#fff}
 .dp-nav{width:28px;height:28px;border:none;background:transparent;border-radius:7px;cursor:pointer;
   color:var(--ink-2);font-size:17px;line-height:1;display:flex;align-items:center;justify-content:center;transition:.12s}
 .dp-nav:hover{background:var(--line-2);color:var(--accent)}
@@ -912,18 +922,23 @@ window.addEventListener('drop',e=>{e.preventDefault();dragDepth=0;veil.classList
 document.getElementById('f').onchange=e=>{if(e.target.files[0])read(e.target.files[0]);e.target.value='';};
 
 /* ═════════ 自定义日历（Trip 风格）═════════ */
-const DP={id:null,view:null};
+const DP={id:null,view:null,mode:'day'};
 const dpKey=(y,m,d)=>`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 function openDP(id){
   document.querySelectorAll('.dp-pop.on').forEach(p=>p.classList.remove('on'));
   const cur=document.getElementById(id).value;
   const base=cur?new Date(cur+'T00:00:00'):(DAYS.length?new Date(DAYS.at(-1).k):new Date());
-  DP.id=id;DP.view=new Date(base.getFullYear(),base.getMonth(),1);
+  DP.id=id;DP.view=new Date(base.getFullYear(),base.getMonth(),1);DP.mode='day';
   renderDP();
   document.getElementById('dp-'+id).classList.add('on');
 }
 function closeDP(){document.querySelectorAll('.dp-pop.on').forEach(p=>p.classList.remove('on'));DP.id=null;}
+function dpMode(m){DP.mode=m;renderDP();}
 function dpNav(delta){DP.view=new Date(DP.view.getFullYear(),DP.view.getMonth()+delta,1);renderDP();}
+function dpNavYear(delta){DP.view=new Date(DP.view.getFullYear()+delta,DP.view.getMonth(),1);renderDP();}
+function dpNavDecade(delta){DP.view=new Date(DP.view.getFullYear()+delta*12,DP.view.getMonth(),1);renderDP();}
+function dpSetYear(y){DP.view=new Date(y,DP.view.getMonth(),1);DP.mode='day';renderDP();}
+function dpSetMonth(m){DP.view=new Date(DP.view.getFullYear(),m,1);DP.mode='day';renderDP();}
 function dpPick(y,m,d){
   document.getElementById(DP.id).value=dpKey(y,m,d);
   syncDateDisplay();closeDP();if(DATA)qExec();
@@ -933,6 +948,28 @@ function dpToday(){const t=new Date();dpPick(t.getFullYear(),t.getMonth(),t.getD
 function renderDP(){
   const pop=document.getElementById('dp-'+DP.id);
   const y=DP.view.getFullYear(),m=DP.view.getMonth();
+  if(DP.mode==='year'){
+    const start=Math.floor(y/12)*12;
+    let h=`<div class="dp-hd">
+      <button class="dp-nav" onclick="dpNavDecade(-1)">‹</button>
+      <div class="dp-title">${start} - ${start+11}</div>
+      <button class="dp-nav" onclick="dpNavDecade(1)">›</button>
+    </div><div class="dp-mgrid">`;
+    for(let i=0;i<12;i++){const yy=start+i;h+=`<button class="${yy===y?'dp-sel':''}" onclick="dpSetYear(${yy})">${yy}</button>`;}
+    pop.innerHTML=h+'</div>';
+    return;
+  }
+  if(DP.mode==='month'){
+    let h=`<div class="dp-hd">
+      <button class="dp-nav" onclick="dpNavYear(-1)">‹</button>
+      <button class="dp-tsel" onclick="dpMode('year')">${y}年</button>
+      <button class="dp-nav" onclick="dpNavYear(1)">›</button>
+    </div><div class="dp-mgrid">`;
+    for(let i=0;i<12;i++)h+=`<button class="${i===m?'dp-sel':''}" onclick="dpSetMonth(${i})">${i+1}月</button>`;
+    pop.innerHTML=h+'</div>';
+    return;
+  }
+  // 日期视图
   const startDow=new Date(y,m,1).getDay();
   const dim=new Date(y,m+1,0).getDate();
   const sel=document.getElementById(DP.id).value;
@@ -941,7 +978,10 @@ function renderDP(){
   const WD=['日','一','二','三','四','五','六'];
   let h=`<div class="dp-hd">
     <button class="dp-nav" onclick="dpNav(-1)">‹</button>
-    <div class="dp-title">${y}年${m+1}月</div>
+    <div class="dp-titles">
+      <button class="dp-tsel" onclick="dpMode('year')">${y}年</button>
+      <button class="dp-tsel" onclick="dpMode('month')">${m+1}月</button>
+    </div>
     <button class="dp-nav" onclick="dpNav(1)">›</button>
   </div><div class="dp-week">`;
   WD.forEach((w,i)=>h+=`<span class="${i===0||i===6?'we':''}">${w}</span>`);
