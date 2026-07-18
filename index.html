@@ -873,7 +873,8 @@ function handleDemoData(aoa,fileName){
 
 function generateMockData(){
   const today=new Date();
-  const endDate=new Date(today.getFullYear(),today.getMonth(),today.getDate()-2);
+  const endDate=new Date(today);
+  endDate.setDate(today.getDate()-2);
   const startDate=new Date(today.getFullYear(),4,15);
 
   const PLATS=['app','pc','h5'];
@@ -905,13 +906,14 @@ function generateMockData(){
             const uvTicket=Math.floor(uvPay*0.9);
             const tk=Math.floor(uvTicket*1.2);
 
-            const crHL=(Math.floor(Math.random()*40+50)/100).toFixed(2);
-            const crLS=(Math.floor(Math.random()*30+55)/100).toFixed(2);
-            const crSF=(Math.floor(Math.random()*20+60)/100).toFixed(2);
-            const crLF=(Math.floor(Math.random()*25+58)/100).toFixed(2);
-            const crFS=(Math.floor(Math.random()*15+70)/100).toFixed(2);
-            const crST=(Math.floor(Math.random()*10+75)/100).toFixed(2);
-            const crLT=(Math.floor(Math.random()*20+65)/100).toFixed(2);
+            // CR值生成为整数百分点，然后转换为小数（50-90转为0.5-0.9）
+            const crHL=(Math.floor(Math.random()*40+50))/100;
+            const crLS=(Math.floor(Math.random()*30+55))/100;
+            const crSF=(Math.floor(Math.random()*20+60))/100;
+            const crLF=(Math.floor(Math.random()*25+58))/100;
+            const crFS=(Math.floor(Math.random()*15+70))/100;
+            const crST=(Math.floor(Math.random()*10+75))/100;
+            const crLT=(Math.floor(Math.random()*20+65))/100;
             rows.push([
               dateStr,'ttl',plat,'ttl','ttl',loc,chan,cust,
               uvHome,uvList,uvSeat,uvForm,uvOrder,uvSubmit,uvPay,uvTicket,
