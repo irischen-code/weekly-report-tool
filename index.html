@@ -165,6 +165,31 @@ td.dim{color:var(--ink-3)}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 .legend{font-size:11.5px;color:var(--ink-3);padding:0 18px 14px}
 
+/* ══════════ 演示密钥弹窗 ══════════ */
+#keyModal{position:fixed;inset:0;background:rgba(15,17,21,.45);backdrop-filter:blur(3px);z-index:500;
+  display:none;align-items:center;justify-content:center;padding:20px}
+#keyModal.on{display:flex}
+.key-card{background:#fff;border-radius:16px;width:100%;max-width:400px;padding:26px 24px;
+  box-shadow:0 20px 60px rgba(0,0,0,.28);animation:keyPop .22s cubic-bezier(.4,0,.2,1)}
+@keyframes keyPop{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
+.key-card .ic{width:44px;height:44px;border-radius:12px;background:var(--accent-soft);
+  display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:14px}
+.key-card h3{font-size:17px;font-weight:700;margin-bottom:6px;color:var(--ink)}
+.key-card p{font-size:13px;color:var(--ink-3);line-height:1.6;margin-bottom:16px}
+.key-card input{width:100%;border:1.5px solid var(--line);border-radius:9px;padding:11px 13px;
+  font-size:14px;font-family:inherit;transition:.15s;outline:none;box-sizing:border-box}
+.key-card input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.key-card input.err{border-color:var(--down);box-shadow:0 0 0 3px rgba(229,72,77,.12)}
+.key-err{color:var(--down);font-size:12px;margin-top:8px;min-height:16px;display:none}
+.key-err.on{display:block}
+.key-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.key-actions button{padding:9px 18px;font-size:13px;font-weight:600;border-radius:9px;
+  cursor:pointer;border:1px solid transparent;transition:.15s;font-family:inherit}
+.key-cancel{background:#fff;border-color:var(--line);color:var(--ink-2)}
+.key-cancel:hover{background:var(--line-2)}
+.key-ok{background:var(--accent);color:#fff}
+.key-ok:hover{background:#2340d3}
+
 /* ══════════ 移动端 / H5 适配 ══════════ */
 @media(max-width:768px){
   /* 顶栏：缩小、隐藏次要信息，tab 可横向滚动 */
@@ -692,6 +717,23 @@ td.dim{color:var(--ink-3)}
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- 演示密钥弹窗 -->
+<div id="keyModal" onclick="if(event.target===this)closeKeyModal()">
+  <div class="key-card">
+    <div class="ic">🔐</div>
+    <h3>进入演示模式</h3>
+    <p>演示数据为随机生成，仅用于展示工具功能。请输入演示密钥继续浏览。</p>
+    <input id="keyInput" type="password" placeholder="请输入演示密钥" autocomplete="off"
+      onkeydown="if(event.key==='Enter')submitKey();else if(event.key==='Escape')closeKeyModal();else clearKeyErr()">
+    <div class="key-err" id="keyErr">密钥错误，请重试</div>
+    <div class="key-actions">
+      <button class="key-cancel" onclick="closeKeyModal()">取消</button>
+      <button class="key-ok" onclick="submitKey()">进入演示</button>
+    </div>
+  </div>
+</div>
+
 <div style="position:fixed;bottom:12px;right:16px;font-size:11px;color:#8b95a3;letter-spacing:.04em;pointer-events:none;z-index:10">
   Made by <span style="color:#4f46e5;font-weight:600">irischen</span>
 </div>
@@ -830,12 +872,25 @@ document.getElementById('f').onchange=e=>{if(e.target.files[0])read(e.target.fil
 
 /* 演示模式 */
 function enterDemoMode(){
-  const key=prompt('请输入演示密钥：');
-  if(key==='triptestdemo'){
+  const m=document.getElementById('keyModal'),inp=document.getElementById('keyInput');
+  inp.value='';clearKeyErr();
+  m.classList.add('on');
+  setTimeout(()=>inp.focus(),50);
+}
+function closeKeyModal(){document.getElementById('keyModal').classList.remove('on');}
+function clearKeyErr(){
+  document.getElementById('keyErr').classList.remove('on');
+  document.getElementById('keyInput').classList.remove('err');
+}
+function submitKey(){
+  const inp=document.getElementById('keyInput');
+  if(inp.value==='triptestdemo'){
+    closeKeyModal();
     const aoa=generateMockData();
     handleDemoData(aoa,'demo-data');
-  }else if(key!==null){
-    alert('密钥错误，请重试');
+  }else{
+    document.getElementById('keyErr').classList.add('on');
+    inp.classList.add('err');inp.focus();inp.select();
   }
 }
 
