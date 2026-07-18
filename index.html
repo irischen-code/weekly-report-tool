@@ -213,11 +213,11 @@ td.dim{color:var(--ink-3)}
 .dp-grid button:hover:not(:disabled){background:var(--accent-soft);color:var(--accent)}
 .dp-grid button.other{cursor:default}
 .dp-grid button:disabled{color:#d3d8e0;cursor:not-allowed}
-.dp-grid button.sel{background:var(--accent);color:#fff;font-weight:600}
-.dp-grid button.sel:hover{background:var(--accent);color:#fff}
+.dp-grid button.dp-sel{background:var(--accent);color:#fff;font-weight:600}
+.dp-grid button.dp-sel:hover{background:var(--accent);color:#fff}
 .dp-grid button.today::after{content:'';position:absolute;bottom:5px;left:50%;transform:translateX(-50%);
   width:4px;height:4px;border-radius:50%;background:var(--accent)}
-.dp-grid button.sel.today::after{background:#fff}
+.dp-grid button.dp-sel.today::after{background:#fff}
 .dp-foot{display:flex;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--line-2)}
 .dp-foot button{border:none;background:transparent;color:var(--accent);font-size:12.5px;font-weight:600;
   cursor:pointer;font-family:inherit;padding:4px 8px;border-radius:6px}
@@ -950,7 +950,7 @@ function renderDP(){
   for(let d=1;d<=dim;d++){
     const val=dpKey(y,m,d),k=+new Date(y,m,d);
     const out=(lo!==null&&(k<lo||k>hi));
-    const cls=[val===sel?'sel':'',val===todayK?'today':''].filter(Boolean).join(' ');
+    const cls=[val===sel?'dp-sel':'',val===todayK?'today':''].filter(Boolean).join(' ');
     h+=`<button class="${cls}" ${out?'disabled':''} onclick="dpPick(${y},${m},${d})">${d}</button>`;
   }
   h+='</div><div class="dp-foot"><button onclick="dpClear()">清除</button><button onclick="dpToday()">今天</button></div>';
