@@ -788,27 +788,10 @@ function enterDemoMode(){
   const key=prompt('请输入演示密钥：');
   if(key==='triptestdemo'){
     const aoa=generateMockData();
-    const ws=XLSX.utils.aoa_to_sheet(aoa);
-    const wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb,ws,'Sheet1');
-    const wbout=XLSX.write(wb,{bookType:'xlsx',type:'array'});
-    const blob=new Blob([wbout],{type:'application/octet-stream'});
-    const file=new File([blob],'demo-data.xlsx',{type:'application/vnd.ms-excel'});
-    processDemoFile(file);
+    handleDemoData(aoa,'demo-data');
   }else if(key!==null){
     alert('密钥错误，请重试');
   }
-}
-
-function processDemoFile(file){
-  const fr=new FileReader();
-  fr.onload=e=>{
-    const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
-    const ws=wb.Sheets[wb.SheetNames[0]];
-    let aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null,blankrows:false});
-    handleDemoData(aoa,file.name);
-  };
-  fr.readAsArrayBuffer(file);
 }
 
 function handleDemoData(aoa,fileName){
@@ -817,36 +800,40 @@ function handleDemoData(aoa,fileName){
   (async()=>{
     try{
       await tick();
+      if(!aoa||!aoa.length||!aoa[0])throw new Error('数据为空');
+
       const head=aoa[0].map(x=>String(x==null?'':x).trim());
-      const at=n=>{const i=head.indexOf(n);if(i<0)throw new Error('缺少列：'+n);return i;};
+      const at=n=>{const i=head.indexOf(n);if(i<0){console.error('缺少列：'+n+', 现有列：'+head.join(','));throw new Error('缺少列：'+n);}return i;};
       const iDate=at(C.date),iPlat=at(C.plat),iReg=at(C.region),iSys=at(C.sys),
             iLoc=at(C.loc),iChan=at(C.chan),iCust=at(C.cust);
       const cols=Object.keys(SLOT).map(f=>[at(f),SLOT[f]]);
 
       const AD2=new Map(),locs=new Set(),chans=new Set(),dayset=new Map();
       let kept=0;
-      const CHUNK=5000;
+      const CHUNK=1000;
       for(let r=1;r<aoa.length;r++){
         if(r%CHUNK===0){setBusy(`正在建立索引… ${Math.round(r/aoa.length*100)}%`);await tick();}
         const row=aoa[r];
-        if(!row||row[iDate]==null)continue;
+        if(!row)continue;
+        const dateVal=row[iDate];
+        if(dateVal==null||dateVal==='')continue;
         if(row[iReg]!=='ttl'||row[iSys]!=='ttl')continue;
-        const d=parseD(row[iDate]);
-        if(isNaN(d))continue;
+        const d=parseD(dateVal);
+        if(isNaN(d.getTime()))continue;
         const dk=+new Date(d.getFullYear(),d.getMonth(),d.getDate());
         if(!dayset.has(dk))dayset.set(dk,new Date(dk));
-        const p=row[iPlat],l=row[iLoc],c=row[iCust],ch=row[iChan];
+        const p=String(row[iPlat]).trim(),l=String(row[iLoc]).trim(),c=String(row[iCust]).trim(),ch=String(row[iChan]).trim();
         if(l!=='ttl')locs.add(l);
         if(ch!=='ttl')chans.add(ch);
         const a=bump(AD2,key(dk,p,l,c,ch));
         for(let j=0;j<cols.length;j++){
           const v=+row[cols[j][0]];
-          if(!isNaN(v))a[cols[j][1]]+=v;
+          if(!isNaN(v)&&isFinite(v))a[cols[j][1]]+=v;
         }
         a[NSLOT]+=1;
         kept++;
       }
-      if(!kept)throw new Error('没有可用数据行');
+      if(!kept)throw new Error('没有可用数据行（期望地区/系统均为ttl）');
 
       setBusy('正在生成报表…');await tick();
       AD=AD2;LOCSET=locs;CHANSET=chans;
@@ -867,6 +854,7 @@ function handleDemoData(aoa,fileName){
       toast(`已加载演示数据 ${kept.toLocaleString()} 行 / ${WEEKS.length} 周（${ms}ms）`);
     }catch(err){
       setBusy(null);
+      console.error(err);
       alert('演示数据生成失败：'+err.message);
     }})();
 }
@@ -906,14 +894,14 @@ function generateMockData(){
             const uvTicket=Math.floor(uvPay*0.9);
             const tk=Math.floor(uvTicket*1.2);
 
-            // CR值生成为整数百分点，然后转换为小数（50-90转为0.5-0.9）
-            const crHL=(Math.floor(Math.random()*40+50))/100;
-            const crLS=(Math.floor(Math.random()*30+55))/100;
-            const crSF=(Math.floor(Math.random()*20+60))/100;
-            const crLF=(Math.floor(Math.random()*25+58))/100;
-            const crFS=(Math.floor(Math.random()*15+70))/100;
-            const crST=(Math.floor(Math.random()*10+75))/100;
-            const crLT=(Math.floor(Math.random()*20+65))/100;
+            // CR值生成为整数百分点(50-90)，然后转为小数(0.50-0.90)
+            const crHL=Math.floor(Math.random()*40+50)/100;
+            const crLS=Math.floor(Math.random()*30+55)/100;
+            const crSF=Math.floor(Math.random()*20+60)/100;
+            const crLF=Math.floor(Math.random()*25+58)/100;
+            const crFS=Math.floor(Math.random()*15+70)/100;
+            const crST=Math.floor(Math.random()*10+75)/100;
+            const crLT=Math.floor(Math.random()*20+65)/100;
             rows.push([
               dateStr,'ttl',plat,'ttl','ttl',loc,chan,cust,
               uvHome,uvList,uvSeat,uvForm,uvOrder,uvSubmit,uvPay,uvTicket,
