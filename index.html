@@ -811,7 +811,7 @@ function generateMockData(){
     C.date,C.pl,C.plat,C.region,C.sys,C.loc,C.chan,C.cust,
     C.uvHome,C.uvList,C.uvSeat,C.uvForm,C.uvOrder,C.uvSubmit,C.uvPay,C.uvTicket,
     C.tk,C.crHL,C.crLS,C.crSF,C.crLF,C.crFS,C.crST,C.crLT
-  ].map(k=>Object.keys(C).find(key=>C[key]===k)?C[Object.keys(C).find(key=>C[key]===k)]:k));
+  ]);
 
   let d=new Date(startDate);
   while(d<=endDate){
