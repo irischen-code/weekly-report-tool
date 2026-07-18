@@ -24,11 +24,11 @@ button{font-family:inherit}
 /* ── top bar ── */
 .topbar{background:#3151F4;color:#fff;padding:0 24px;height:58px;display:flex;align-items:center;gap:28px;position:sticky;top:0;z-index:50}
 .brand{font-size:14px;font-weight:600;letter-spacing:.02em;display:flex;align-items:center;gap:9px}
-.tabs-top{display:flex;gap:0;margin-left:16px;border-bottom:none}
-.tabs-top button{background:transparent;border:0;border-bottom:2px solid transparent;color:rgba(255,255,255,0.6);padding:8px 18px;font-size:13px;border-radius:0;cursor:pointer;transition:.15s;margin-bottom:-1px;position:relative}
+.tabs-top{display:flex;gap:0;margin-left:16px;border-bottom:none;position:relative;--indicator-left:0;--indicator-width:0}
+.tabs-top::before{content:'';position:absolute;bottom:0;left:var(--indicator-left);width:var(--indicator-width);height:2px;background:#fff;border-radius:1px;transition:all .3s cubic-bezier(.4,0,.2,1);z-index:0}
+.tabs-top button{background:transparent;border:0;border-bottom:2px solid transparent;color:rgba(255,255,255,0.6);padding:8px 18px;font-size:13px;border-radius:0;cursor:pointer;transition:.15s;margin-bottom:-1px;position:relative;z-index:1}
 .tabs-top button:hover{color:#fff}
 .tabs-top button.on{color:#fff;border-bottom:2px solid transparent;font-weight:600}
-.tabs-top button.on::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:calc(100% - 36px);height:2px;background:#fff;border-radius:1px}
 .topbar .right{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12px;color:#7b8494}
 .pill{background:transparent;border:none;padding:5px 10px;color:rgba(255,255,255,0.8);font-size:11.5px}
 
@@ -646,6 +646,44 @@ td.dim{color:var(--ink-3)}
 </div>
 
 <script>
+/* ═════════ 导航Tab滑行动效 ═════════ */
+function initTabSlider(){
+  const tabsContainer=document.querySelector('.tabs-top');
+  const buttons=tabsContainer.querySelectorAll('button');
+  if(!buttons.length)return;
+
+  window.updateTabIndicator=function(btn){
+    const rect=btn.getBoundingClientRect();
+    const containerRect=tabsContainer.getBoundingClientRect();
+    const left=rect.left-containerRect.left;
+    const width=rect.width;
+    tabsContainer.style.setProperty('--indicator-left',left+'px');
+    tabsContainer.style.setProperty('--indicator-width',width+'px');
+  };
+
+  // 初始化激活状态
+  const activeBtn=tabsContainer.querySelector('button.on');
+  if(activeBtn)window.updateTabIndicator(activeBtn);
+
+  // hover时滑动到目标
+  buttons.forEach(btn=>{
+    btn.addEventListener('mouseenter',()=>window.updateTabIndicator(btn));
+  });
+
+  // 移出菜单后复位
+  tabsContainer.addEventListener('mouseleave',()=>{
+    const activeBtn=tabsContainer.querySelector('button.on');
+    if(activeBtn)window.updateTabIndicator(activeBtn);
+  });
+
+  // 窗口resize时更新
+  window.addEventListener('resize',()=>{
+    const activeBtn=tabsContainer.querySelector('button.on');
+    if(activeBtn)window.updateTabIndicator(activeBtn);
+  });
+}
+document.addEventListener('DOMContentLoaded',initTabSlider);
+
 /* ═════════ 列名 ═════════ */
 const C={
   date:'日期 Date', pl:'国家地区产线 Country/Region Production Line', plat:'平台 Platform',
@@ -1365,6 +1403,9 @@ function nav(k){
   document.getElementById('nav-report').classList.toggle('on',k==='report');
   document.getElementById('nav-query').classList.toggle('on',k==='query');
   syncShell();
+  // 更新导航指示线
+  const activeBtn=document.querySelector('.tabs-top button.on');
+  if(activeBtn&&window.updateTabIndicator){window.updateTabIndicator(activeBtn);}
 }
 function showMod(el){
   document.querySelectorAll('.side a').forEach(a=>a.classList.remove('on'));el.classList.add('on');
