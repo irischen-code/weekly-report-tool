@@ -190,6 +190,39 @@ td.dim{color:var(--ink-3)}
 .key-ok{background:var(--accent);color:#fff}
 .key-ok:hover{background:#2340d3}
 
+/* ══════════ 自定义日历（Trip 风格）══════════ */
+.dp-trigger{background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left}
+.dp-trigger::after{content:'▾';color:var(--ink-3);font-size:11px;flex-shrink:0}
+.dp-trigger:hover{border-color:#c9cfda}
+.dp-trigger .dp-val{color:var(--ink)}
+.dp-trigger.empty .dp-val{color:var(--ink-3)}
+.dp-pop{display:none;position:absolute;top:100%;left:0;z-index:60;margin-top:6px;background:#fff;
+  border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 34px rgba(0,0,0,.14);padding:14px;width:280px}
+.dp-pop.on{display:block;animation:keyPop .16s ease}
+.dp-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.dp-hd .dp-title{font-size:14px;font-weight:600;color:var(--ink)}
+.dp-nav{width:28px;height:28px;border:none;background:transparent;border-radius:7px;cursor:pointer;
+  color:var(--ink-2);font-size:17px;line-height:1;display:flex;align-items:center;justify-content:center;transition:.12s}
+.dp-nav:hover{background:var(--line-2);color:var(--accent)}
+.dp-week{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px}
+.dp-week span{text-align:center;font-size:11.5px;color:var(--ink-3);padding:4px 0;font-weight:600}
+.dp-week span.we{color:var(--accent)}
+.dp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.dp-grid button{border:none;background:transparent;border-radius:8px;height:34px;font-size:13px;cursor:pointer;
+  color:var(--ink);font-family:inherit;transition:.1s;position:relative}
+.dp-grid button:hover:not(:disabled){background:var(--accent-soft);color:var(--accent)}
+.dp-grid button.other{cursor:default}
+.dp-grid button:disabled{color:#d3d8e0;cursor:not-allowed}
+.dp-grid button.sel{background:var(--accent);color:#fff;font-weight:600}
+.dp-grid button.sel:hover{background:var(--accent);color:#fff}
+.dp-grid button.today::after{content:'';position:absolute;bottom:5px;left:50%;transform:translateX(-50%);
+  width:4px;height:4px;border-radius:50%;background:var(--accent)}
+.dp-grid button.sel.today::after{background:#fff}
+.dp-foot{display:flex;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--line-2)}
+.dp-foot button{border:none;background:transparent;color:var(--accent);font-size:12.5px;font-weight:600;
+  cursor:pointer;font-family:inherit;padding:4px 8px;border-radius:6px}
+.dp-foot button:hover{background:var(--accent-soft)}
+
 /* ══════════ 移动端 / H5 适配 ══════════ */
 @media(max-width:768px){
   /* 顶栏：缩小、隐藏次要信息，tab 可横向滚动 */
@@ -545,8 +578,16 @@ td.dim{color:var(--ink-3)}
                 <button onclick="segOn(this);Q.gran='week';if(DATA)qExec()">周</button>
                 <button onclick="segOn(this);Q.gran='month';if(DATA)qExec()">月</button>
               </div></div>
-            <div><label class="qlbl">开始日期</label><input type="date" class="sel" id="qStart" style="min-width:140px;margin-top:4px" onchange="if(DATA)qExec()"></div>
-            <div><label class="qlbl">结束日期</label><input type="date" class="sel" id="qEnd" style="min-width:140px;margin-top:4px" onchange="if(DATA)qExec()"></div>
+            <div style="position:relative"><label class="qlbl">开始日期</label>
+              <input type="hidden" id="qStart">
+              <button type="button" class="sel dp-trigger empty" id="qStartBtn" style="min-width:140px;margin-top:4px" onclick="openDP('qStart')"><span class="dp-val">选择日期</span></button>
+              <div class="dp-pop" id="dp-qStart"></div>
+            </div>
+            <div style="position:relative"><label class="qlbl">结束日期</label>
+              <input type="hidden" id="qEnd">
+              <button type="button" class="sel dp-trigger empty" id="qEndBtn" style="min-width:140px;margin-top:4px" onclick="openDP('qEnd')"><span class="dp-val">选择日期</span></button>
+              <div class="dp-pop" id="dp-qEnd"></div>
+            </div>
           </div>
 
           <!-- 维度多选（折叠面板） -->
@@ -869,6 +910,65 @@ window.addEventListener('dragleave',()=>{if(--dragDepth<=0){dragDepth=0;veil.cla
 window.addEventListener('drop',e=>{e.preventDefault();dragDepth=0;veil.classList.remove('on');
   if(e.dataTransfer.files[0])read(e.dataTransfer.files[0]);});
 document.getElementById('f').onchange=e=>{if(e.target.files[0])read(e.target.files[0]);e.target.value='';};
+
+/* ═════════ 自定义日历（Trip 风格）═════════ */
+const DP={id:null,view:null};
+const dpKey=(y,m,d)=>`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+function openDP(id){
+  document.querySelectorAll('.dp-pop.on').forEach(p=>p.classList.remove('on'));
+  const cur=document.getElementById(id).value;
+  const base=cur?new Date(cur+'T00:00:00'):(DAYS.length?new Date(DAYS.at(-1).k):new Date());
+  DP.id=id;DP.view=new Date(base.getFullYear(),base.getMonth(),1);
+  renderDP();
+  document.getElementById('dp-'+id).classList.add('on');
+}
+function closeDP(){document.querySelectorAll('.dp-pop.on').forEach(p=>p.classList.remove('on'));DP.id=null;}
+function dpNav(delta){DP.view=new Date(DP.view.getFullYear(),DP.view.getMonth()+delta,1);renderDP();}
+function dpPick(y,m,d){
+  document.getElementById(DP.id).value=dpKey(y,m,d);
+  syncDateDisplay();closeDP();if(DATA)qExec();
+}
+function dpClear(){document.getElementById(DP.id).value='';syncDateDisplay();closeDP();if(DATA)qExec();}
+function dpToday(){const t=new Date();dpPick(t.getFullYear(),t.getMonth(),t.getDate());}
+function renderDP(){
+  const pop=document.getElementById('dp-'+DP.id);
+  const y=DP.view.getFullYear(),m=DP.view.getMonth();
+  const startDow=new Date(y,m,1).getDay();
+  const dim=new Date(y,m+1,0).getDate();
+  const sel=document.getElementById(DP.id).value;
+  const t=new Date(),todayK=dpKey(t.getFullYear(),t.getMonth(),t.getDate());
+  const lo=DAYS.length?DAYS[0].k:null,hi=DAYS.length?DAYS.at(-1).k:null;
+  const WD=['日','一','二','三','四','五','六'];
+  let h=`<div class="dp-hd">
+    <button class="dp-nav" onclick="dpNav(-1)">‹</button>
+    <div class="dp-title">${y}年${m+1}月</div>
+    <button class="dp-nav" onclick="dpNav(1)">›</button>
+  </div><div class="dp-week">`;
+  WD.forEach((w,i)=>h+=`<span class="${i===0||i===6?'we':''}">${w}</span>`);
+  h+='</div><div class="dp-grid">';
+  for(let i=0;i<startDow;i++)h+='<button class="other" disabled></button>';
+  for(let d=1;d<=dim;d++){
+    const val=dpKey(y,m,d),k=+new Date(y,m,d);
+    const out=(lo!==null&&(k<lo||k>hi));
+    const cls=[val===sel?'sel':'',val===todayK?'today':''].filter(Boolean).join(' ');
+    h+=`<button class="${cls}" ${out?'disabled':''} onclick="dpPick(${y},${m},${d})">${d}</button>`;
+  }
+  h+='</div><div class="dp-foot"><button onclick="dpClear()">清除</button><button onclick="dpToday()">今天</button></div>';
+  pop.innerHTML=h;
+}
+function syncDateDisplay(){
+  ['qStart','qEnd'].forEach(id=>{
+    const inp=document.getElementById(id),btn=document.getElementById(id+'Btn');
+    if(!inp||!btn)return;
+    const span=btn.querySelector('.dp-val'),v=inp.value;
+    if(v){span.textContent=v.replace(/-/g,'/');btn.classList.remove('empty');}
+    else{span.textContent='选择日期';btn.classList.add('empty');}
+  });
+}
+// 点击日历外部关闭
+document.addEventListener('click',e=>{
+  if(DP.id&&!e.target.closest('.dp-pop')&&!e.target.closest('.dp-trigger'))closeDP();
+});
 
 /* 演示模式 */
 function enterDemoMode(){
@@ -2103,6 +2203,7 @@ function nlQuery(){
     document.getElementById('qStart').value='';
     document.getElementById('qEnd').value='';
   }
+  syncDateDisplay();
   qSelectedMetrics=new Set();
   ALL_Q_METRICS.forEach((m,i)=>{if(raw.includes(m.n))qSelectedMetrics.add(i);});
   if(!qSelectedMetrics.size)qSelectedMetrics=new Set([0,1]);
@@ -2115,6 +2216,7 @@ function nlQuery(){
 function qReset(){
   document.getElementById('nlInput').value='';
   document.getElementById('qStart').value='';document.getElementById('qEnd').value='';
+  syncDateDisplay();
   ['qPlat','qLoc','qCust','qChan'].forEach(id=>setSelectVal(id,'ttl'));
   // 重置快捷查询多选状态
   Object.keys(QQ).forEach(k=>{QQ[k]=new Set(['ttl']);syncQQToSelect(k);});
